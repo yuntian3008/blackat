@@ -5,8 +5,10 @@
  * @format
  */
 
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import type {PropsWithChildren} from 'react';
+import type { PropsWithChildren } from 'react';
 import {
   Alert,
   Button,
@@ -25,66 +27,69 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import Introduce from './screens/introduce';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Login from './screens/login';
 
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
-function Section({children, title}: SectionProps): JSX.Element {
-  return (
-    <View className="mt-8 px-2">
-      <Text className="text-2xl text-black dark:text-white">
-        {title}
-      </Text>
-      <Text className="mt-2 text-lg text-black dark:text-white">
-        {children}
-      </Text>
-    </View>
-  );
-}
+
+
+const DefaultNavigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: 'rgb(255, 255, 255)',
+  },
+};
+
+const DarkNavigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: 'rgb(15, 23, 42)',
+  },
+};
+
+export type RootStackParamList = {
+  Introduce: undefined,
+  Login: undefined,
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
 function App(): JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
-  
+
   const { SignalModule } = NativeModules
-  
+
   const backgroundStyle = "bg-neutral-300 dark:bg-slate-900"
 
   const clickTest = async () => {
     const result = await SignalModule.generateIdentityKeyPair() as Array<number>;
-  
-    Alert.alert("test",result.toString())
+
+    Alert.alert("test", result.toString())
     console.log(result)
   }
 
+  const scheme = useColorScheme()
+
+
   return (
-    <SafeAreaView className={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        className={backgroundStyle}>
-        <Header />
-        <View className="bg-white dark:bg-black">
-          <Button title='CLICK TO TEST' onPress={clickTest}/>
-          <Section title="Step One">
-            Edit <Text className="font-bold">App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <NavigationContainer theme={ scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}>
+          <Stack.Navigator>
+            <Stack.Screen name='Introduce' component={Introduce} options={{ headerShown: false }} />
+            <Stack.Screen name='Login' component={Login} options={{ headerShown: false }} />
+          </Stack.Navigator>            
+
+      </NavigationContainer>
+    </SafeAreaProvider>
+    // <Introduce/>
+
+
   );
 }
 
