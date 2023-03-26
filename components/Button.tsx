@@ -1,5 +1,5 @@
 import { styled } from "nativewind";
-import { Pressable, PressableProps, Text, TextProps, TouchableNativeFeedback, View } from "react-native";
+import { Pressable, PressableProps, Text, TextProps, View } from "react-native";
 
 type PropsWithoutConflicts = Omit<PressableProps, "children" | "style"> &
     Omit<TextProps, "onLongPress" | "onPress" | "onPressIn" | "onPressOut">;

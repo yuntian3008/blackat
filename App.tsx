@@ -7,34 +7,24 @@
 
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import {
   Alert,
-  Button,
   NativeModules,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
   useColorScheme,
-  View,
 } from 'react-native';
 
-import {
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 import Introduce from './screens/introduce';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Login from './screens/login';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
+import * as eva from '@eva-design/eva';
+import { ApplicationProvider, IconRegistry } from '@ui-kitten/components';
+import { EvaIconsPack } from '@ui-kitten/eva-icons';
+import { default as MyBrandTheme } from './custom-theme.json'
+import Home from './screens/home';
+import Splash from './screens/splash';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 
 
 const DefaultNavigationTheme = {
@@ -56,40 +46,70 @@ const DarkNavigationTheme = {
 export type RootStackParamList = {
   Introduce: undefined,
   Login: undefined,
+  Home: undefined
+  Splash: {
+    onReady: () => void
+  }
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
 function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  const { SignalModule } = NativeModules
+  // Set an initializing state whilst Firebase connects
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(null);
+  const [splashOpening, setSplashOpening] = useState(true)
 
-  const backgroundStyle = "bg-neutral-300 dark:bg-slate-900"
+  useEffect(() => {
+    const subscriber = auth().onAuthStateChanged((userState) => {
+      setUser(userState);
+      if (initializing) setInitializing(false);
+    });
+    return subscriber; // unsubscribe on unmount
+  }, []);
 
-  const clickTest = async () => {
-    const result = await SignalModule.generateIdentityKeyPair() as Array<number>;
+  // const { SignalModule } = NativeModules
 
-    Alert.alert("test", result.toString())
-    console.log(result)
+  // const clickTest = async () => {
+  //   const result = await SignalModule.generateIdentityKeyPair() as Array<number>;
+
+  //   Alert.alert("test", result.toString())
+  //   console.log(result)
+  // }
+
+  if (initializing || splashOpening) {
+    return (<Splash onAnimationFinished={() => setSplashOpening(false)} />);
   }
-
-  const scheme = useColorScheme()
 
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer theme={ scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}>
-          <Stack.Navigator>
-            <Stack.Screen name='Introduce' component={Introduce} options={{ headerShown: false }} />
-            <Stack.Screen name='Login' component={Login} options={{ headerShown: false }} />
-          </Stack.Navigator>            
+    <>
+      <IconRegistry icons={EvaIconsPack} />
+      <ApplicationProvider {...eva} theme={{ ...eva.light, ...MyBrandTheme }}>
+        <SafeAreaProvider>
+          {/* <NavigationContainer theme={scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}> */}
+          <NavigationContainer>
+            <Stack.Navigator>
+              {!user ? (
+                <>
+                  <Stack.Screen name='Introduce' component={Introduce} options={{ headerShown: false }} />
+                  <Stack.Screen name='Login' component={Login} options={{ headerShown: false }} />
+                </>
 
-      </NavigationContainer>
-    </SafeAreaProvider>
-    // <Introduce/>
+              ) : (
+                <>
+                  <Stack.Screen name='Home' component={Home} options={{ headerShown: false }} />
+                </>
+              )}
 
+              <Stack.Screen name='Home' component={Home} options={{ headerShown: false }} />
+            </Stack.Navigator>
 
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </ApplicationProvider>
+    </>
   );
 }
 

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "121074045326",
+    "project_id": "blackat-acf2d",
+    "storage_bucket": "blackat-acf2d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121074045326:android:c9c629ffa565c712e894df",
+        "android_client_info": {
+          "package_name": "com.blackat.chat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "121074045326-0rphphhto6cv9h8j0p5erk6rs85gvgck.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.blackat.chat",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "121074045326-m0neheho2mhjph45fqbdp1482uj0gkk1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8P8CvO2B0SIsKR60nQOf4HrYHei61Eso"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "121074045326-m0neheho2mhjph45fqbdp1482uj0gkk1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
