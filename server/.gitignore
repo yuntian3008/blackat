@@ -1,0 +1,12 @@
+#Firebase Service Account
+#
+service-account-key.ts
+
+# node.js
+#
+node_modules/
+npm-debug.log
+yarn-error.log
+
+
+
