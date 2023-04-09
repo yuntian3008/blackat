@@ -1,6 +1,7 @@
 package com.blackat.chat;
 
 import android.app.Application;
+import android.content.Context;
 import android.util.Log;
 
 import com.facebook.react.PackageList;
@@ -18,6 +19,7 @@ import java.util.List;
 
 public class MainApplication extends Application implements ReactApplication {
 
+    private static Context context;
   private final ReactNativeHost mReactNativeHost =
       new DefaultReactNativeHost(this) {
         @Override
@@ -66,5 +68,10 @@ public class MainApplication extends Application implements ReactApplication {
       DefaultNewArchitectureEntryPoint.load();
     }
     ReactNativeFlipper.initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
+    MainApplication.context = getApplicationContext();
+  }
+
+  public static Context getApplication() {
+      return MainApplication.context;
   }
 }

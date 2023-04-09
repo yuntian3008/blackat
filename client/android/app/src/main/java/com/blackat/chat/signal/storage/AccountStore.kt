@@ -1,0 +1,103 @@
+package com.blackat.chat.signal.storage
+
+import com.blackat.chat.data.dao.KeyValueDao
+import com.blackat.chat.data.model.KeyValue
+import com.blackat.chat.signal.crypto.IdentityKeyUtil
+import com.blackat.chat.signal.storage.keyvalue.SignalStoreValues
+import org.signal.libsignal.protocol.IdentityKey
+import org.signal.libsignal.protocol.IdentityKeyPair
+import org.signal.libsignal.protocol.ecc.Curve
+import org.signal.libsignal.protocol.util.KeyHelper
+import org.signal.libsignal.protocol.util.Medium
+import java.security.SecureRandom
+
+class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
+
+    companion object {
+        private const val REGISTRATION_ID: String = "account.registration_id"
+
+        private const val KEY_IDENTITY_PUBLIC_KEY = "account.identity_public_key"
+        private const val KEY_IDENTITY_PRIVATE_KEY = "account.identity_private_key"
+        
+        private const val KEY_SIGNED_PREKEY_REGISTERED = "account.signed_prekey_registered"
+
+        private const val KEY_ACTIVE_SIGNED_PREKEY_ID = "account.active_signed_prekey_id"
+        private const val KEY_SIGNED_PREKEY_FAILURE_COUNT = "account.signed_prekey_failure_count"
+
+        private const val KEY_NEXT_SIGNED_PREKEY_ID = "account.next_signed_prekey_id"
+        private const val KEY_NEXT_ONE_TIME_PREKEY_ID = "account.next_one_time_prekey_id"
+    }
+    suspend fun generateRegistrationIdIfNecessary(): Boolean {
+        return try {
+            if (!contain(AccountStore.REGISTRATION_ID))
+                putInteger(AccountStore.REGISTRATION_ID,KeyHelper.generateRegistrationId(false))
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun getRegistrationId() : Int {
+        generateRegistrationIdIfNecessary()
+        return getInteger(AccountStore.REGISTRATION_ID,0)
+    }
+
+    private suspend fun generateNextSignedPreKeyIdIfNecessary() {
+            if (!contain(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID))
+                putInteger(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID,SecureRandom().nextInt(Medium.MAX_VALUE))
+    }
+
+    suspend fun getNextSignedPreKeyId(): Int {
+        generateNextSignedPreKeyIdIfNecessary()
+        return getInteger(KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+    }
+    suspend fun setNextSignedPreKeyId(value: Int) {
+        putInteger(KEY_NEXT_SIGNED_PREKEY_ID, value = value)
+    }
+
+    private suspend fun generateNextOneTimePreKeyIdIfNecessary() {
+        if (!contain(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID))
+            putInteger(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID,SecureRandom().nextInt(Medium.MAX_VALUE))
+    }
+
+    suspend fun getNextOneTimePreKeyId(): Int {
+        generateNextSignedPreKeyIdIfNecessary()
+        return getInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+    }
+    suspend fun setNextOneTimePreKeyId(value: Int) {
+        putInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, value = value)
+    }
+
+    suspend fun generateIdentityKeyPairIfNecessary() {
+        if (hasIdentityKeyPair()) return;
+
+        val key = IdentityKeyUtil.generateIdentityKeyPair()
+        putBlob(KEY_IDENTITY_PUBLIC_KEY, key.publicKey.serialize())
+        putBlob(KEY_IDENTITY_PRIVATE_KEY, key.privateKey.serialize())
+    }
+
+    suspend fun hasIdentityKeyPair(): Boolean {
+        return contain(AccountStore.KEY_IDENTITY_PUBLIC_KEY)
+    }
+
+    suspend fun getIdentityKeyPair(): IdentityKeyPair {
+        require(hasIdentityKeyPair()) { "Not set yet!"}
+        return IdentityKeyPair(
+                IdentityKey(getBlob(KEY_IDENTITY_PUBLIC_KEY, null)),
+                Curve.decodePrivatePoint(getBlob(KEY_IDENTITY_PRIVATE_KEY, null))
+        )
+    }
+
+
+
+//    @get:JvmName("aciPreKeys")
+//    val aciPreKeys: PreKeyMetadataStore = object : PreKeyMetadataStore {
+//        override var nextSignedPreKeyId: Int = IntVa (KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+//        override var activeSignedPreKeyId: Int by integerValue(KEY_ACTIVE_SIGNED_PREKEY_ID, -1)
+//        override var isSignedPreKeyRegistered: Boolean by booleanValue(KEY_SIGNED_PREKEY_REGISTERED, false)
+//        override var signedPreKeyFailureCount: Int by integerValue(KEY_SIGNED_PREKEY_FAILURE_COUNT, 0)
+//        override var nextOneTimePreKeyId: Int by integerValue(KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+//    }
+
+}
+

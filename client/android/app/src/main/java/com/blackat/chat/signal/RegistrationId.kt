@@ -12,11 +12,9 @@ class RegistrationId {
         @SuppressLint("CommitPrefEdits")
         fun generate(context : ReactApplicationContext) : Int {
             val pref = context.getSharedPreferences("signal", ReactApplicationContext.MODE_PRIVATE)
-            val isGenerated = pref.contains("registration_id")
-            return if (!isGenerated) {
-                val editor = pref.edit()
+            return if (!isGenerated(context)) {
                 val newRegistrationId = KeyHelper.generateRegistrationId(false)
-                editor.putInt("registration_id", newRegistrationId).apply()
+                pref.edit().putInt("registration_id", newRegistrationId).apply()
                 newRegistrationId
             } else
                 pref.getInt("registration_id",0)

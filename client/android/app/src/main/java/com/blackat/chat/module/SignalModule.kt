@@ -4,7 +4,7 @@ import android.util.Base64
 import android.util.Log
 import androidx.room.Room
 import com.blackat.chat.data.database.SignalDatabase
-import com.blackat.chat.data.model.KeyValue
+import com.blackat.chat.data.repository.SignalRepository
 import com.blackat.chat.signal.RegistrationId
 import com.blackatclient.Utils
 import com.facebook.react.bridge.LifecycleEventListener
@@ -13,14 +13,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import kotlinx.coroutines.*
-import okio.ByteString.Companion.encode
-import org.signal.libsignal.protocol.IdentityKey
 import org.signal.libsignal.protocol.IdentityKeyPair
-import org.signal.libsignal.protocol.SignalProtocolAddress
-import org.signal.libsignal.protocol.state.impl.InMemoryIdentityKeyStore
-import org.signal.libsignal.protocol.util.ByteUtil
-import org.signal.libsignal.protocol.util.KeyHelper
-import java.nio.charset.Charset
 
 class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(), LifecycleEventListener {
     init {
@@ -54,13 +47,11 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
     fun logged(phoneNumber: String, deviceId: Int, promise: Promise) {
         scope.launch {
             try {
-                throw Exception("ahihi")
+
                 val response = withContext(context = Dispatchers.IO) {
-                    delay(2000)
-                    return@withContext "ok"
+                    return@withContext SignalRepository.onLogged(phoneNumber, deviceId)
                 }
-                delay(1000)
-                cancel()
+
                 promise.resolve(response)
             } catch (e: Exception) {
                 promise.reject(e)
