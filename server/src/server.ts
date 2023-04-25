@@ -35,7 +35,7 @@ io.on("connection", (socket) => {
 
 async function run() {
   
-  await connect('mongodb://localhost:27017/blackat')
+  await connect('mongodb+srv://blackat:Tpl.22062001@blackat.pnrmksc.mongodb.net/blackat')
   // console.log("[SYS] Connected to database")
 
   if (testMode) {
