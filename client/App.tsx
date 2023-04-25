@@ -14,6 +14,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   BackHandler,
+  DevSettings,
   LogBox,
   NativeEventEmitter,
   NativeModules,
@@ -327,6 +328,14 @@ function App(): JSX.Element {
                     title: "Blackat",
                     headerRight: () => {
                       const menuItems: MenuItems[] = [
+                        {
+                          label: "Dev - clear all tables",
+                          onPress: () => {
+                            SignalModule.clearAllTables().then(() => {
+                              DevSettings.reload()
+                            })
+                          }
+                        },
                         {
                           label: "Cài đặt",
                           onPress: () => {

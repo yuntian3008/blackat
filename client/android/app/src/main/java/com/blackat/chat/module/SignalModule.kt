@@ -308,11 +308,32 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
 
                 }
-                val targetAddress = ReadableMapUtils.getAddress(address)
-                Log.d("DebugV3", "Đã mã hóa tin nhắn [${targetAddress.name},${targetAddress.deviceId}]: $response")
+//                val targetAddress = ReadableMapUtils.getAddress(address)
+//                Log.d("DebugV3", "Đã mã hóa tin nhắn [${targetAddress.name},${targetAddress.deviceId}]: $response")
                 promise.resolve(response)
             } catch (e: Exception) {
                 promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun clearAllTables(promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    SignalRepository.clearAllTables()
+                    AppRepository.clearAllTables()
+                }
+
+                promise.resolve(null)
+
+            } catch (e: Exception) {
+                promise.resolve(e)
+                Log.e("clearAllTables",e.message ?: "")
             }
         }
     }
@@ -345,6 +366,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                     } else {
                         val inComingMessage = SignalMessage(dataCipherMessage)
+                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
                         val plaintextContent = sessionCipher.decrypt(inComingMessage)
                         String(plaintextContent)
                     }

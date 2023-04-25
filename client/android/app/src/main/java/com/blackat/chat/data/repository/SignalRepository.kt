@@ -25,6 +25,7 @@ class SignalRepository(signalDatabase: SignalDatabase) {
     private val signalSignedPreKeyStore: SignalSignedPreKeyStore = SignalSignedPreKeyStore(signalDatabase.signedPreKeyDao())
     private val signalSessionStore: SignalSessionStore = SignalSessionStore(signalDatabase.sessionDao())
     private val signalStore: SignalStore = SignalStore()
+    private val database = signalDatabase
 
     companion object {
         @Volatile
@@ -61,5 +62,6 @@ class SignalRepository(signalDatabase: SignalDatabase) {
         suspend fun signalSignedPreKey() = getInstance().signalSignedPreKeyStore
         suspend fun signalSession() = getInstance().signalSessionStore
         suspend fun signalStore() = getInstance().signalStore
+        suspend fun clearAllTables() = getInstance().database.clearAllTables()
     }
 }

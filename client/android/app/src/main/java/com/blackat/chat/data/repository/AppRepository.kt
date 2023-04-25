@@ -22,6 +22,7 @@ import java.security.SecureRandom
 class AppRepository(appDatabase: AppDatabase) {
     private val privateConversationStore = PrivateConversationStore(appDatabase.privateConversationDao(),appDatabase.privateMessageDao())
     private val privateMessageStore = PrivateMessageStore(appDatabase.privateMessageDao())
+    private val database = appDatabase
     companion object {
         @Volatile
         private var instance: AppRepository? = null
@@ -42,5 +43,7 @@ class AppRepository(appDatabase: AppDatabase) {
 
         suspend fun privateConversation() = getInstance().privateConversationStore
         suspend fun privateMessage() = getInstance().privateMessageStore
+
+        suspend fun clearAllTables() = getInstance().database.clearAllTables()
     }
 }

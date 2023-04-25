@@ -11,6 +11,7 @@ interface SignalModuleInterface {
         CURRENT_COUNTRY_CODE: CountryCode
     }
     testBasicPreKeyV3(): void
+    clearAllTables(): Promise<void>
     logged(phonenumber: String, deviceId: number): void
     onFirstEverAppLaunch(): Promise<boolean>
     requireIdentityKey(): Promise<Signal.Types.IdentityKey>

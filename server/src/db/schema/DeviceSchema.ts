@@ -44,6 +44,7 @@ DeviceSchema.index({
 DeviceSchema.pre('save', function(next) {
     let device = this
     Counter.inc(device.user,'device').then((deviceId) => {
+        console.log("truoc khi save", deviceId)
         device.deviceId = deviceId
         next()
     }).catch(err => next(err))

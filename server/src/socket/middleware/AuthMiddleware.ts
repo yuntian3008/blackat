@@ -20,10 +20,8 @@ const handle = async (socket: ServerSocket): Promise<void> => {
         socket.data.device = registrationId
 
         const loginResult = await User.login(phoneNumber, registrationId)
-        console.log(loginResult)
         if (loginResult.success == true) {
             socket.data.logged = loginResult.info
-            console.log('vo dc toi day')
             const device_id = await Device.getId(loginResult.info.e164, loginResult.info.deviceId)
             socket.data.deviceObjectId = device_id
             
