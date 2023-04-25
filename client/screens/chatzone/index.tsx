@@ -107,11 +107,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         e164: string, message: App.Types.MessageData) {
         // console.log("startSendMessageToServer")
         const addresses = await getAddresses(e164)
-        // console.log("addresses: ")
-        // console.log(addresses)
         const missingSession = await SignalModule.missingSession(addresses)
-        // console.log("missing: ")
-        // console.log(missingSession)
         for (let index = 0; index < missingSession.length; index++) {
             const missing = missingSession[index];
             const preKeyBundle = await getPreKeyBundle(missing)
@@ -138,9 +134,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 console.log("[Mã hóa tin nhắn lỗi]: ")
                 console.log(e)
             }
-
-            // console.log("cipher[" + address.deviceId + "]: " + cipher)
-
         }
 
     }

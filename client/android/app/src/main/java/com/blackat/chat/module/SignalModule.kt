@@ -5,6 +5,7 @@ import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import com.blackat.chat.data.repository.AppRepository
 import com.blackat.chat.data.repository.SignalRepository
 import com.blackat.chat.signal.crypto.PreKeyUtil
 import com.blackat.chat.utils.*
@@ -333,10 +334,15 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     val sessionCipher = SessionCipher(SignalRepository.signalStore(),sender)
                     Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${sender.name},${sender.deviceId}] TYPE: $typeCipherMessage")
                     val plaintext: String = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
+                        AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
+                            if (it.messages.size > 1)
+                                throw Exception("wait-response")
+                        }
                         val inComingMessage = PreKeySignalMessage(dataCipherMessage)
-
+                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
                         val plaintextContent = sessionCipher.decrypt(inComingMessage)
                         String(plaintextContent)
+
                     } else {
                         val inComingMessage = SignalMessage(dataCipherMessage)
                         val plaintextContent = sessionCipher.decrypt(inComingMessage)
