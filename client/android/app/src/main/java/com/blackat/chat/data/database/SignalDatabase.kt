@@ -15,7 +15,7 @@ import com.blackat.chat.data.model.*
     OneTimePreKey::class,
     SignedPreKey::class,
     Session::class
-], version = 5)
+], version = 8)
 @TypeConverters(Converters::class)
 abstract class SignalDatabase : RoomDatabase() {
     abstract fun keyValueDao(): KeyValueDao

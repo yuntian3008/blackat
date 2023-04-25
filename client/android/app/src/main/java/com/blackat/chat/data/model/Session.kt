@@ -7,11 +7,8 @@ import org.signal.libsignal.protocol.state.SessionRecord
 
 @Entity(tableName = "sessions")
 data class Session(
+        @PrimaryKey
         @Embedded
         val address: Address,
         val record: SessionRecord
-) {
-    @PrimaryKey(autoGenerate = true)
-    var id: Int? = null
-
-}
+)

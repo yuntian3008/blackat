@@ -1,9 +1,6 @@
 package com.blackat.chat.data.dao
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.blackat.chat.data.model.Session
 import com.blackat.chat.data.model.SignedPreKey
 
@@ -11,6 +8,9 @@ import com.blackat.chat.data.model.SignedPreKey
 interface SessionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(session: Session)
+
+    @Upsert()
+    suspend fun upsert(session: Session)
 
     @Query("SELECT * FROM sessions WHERE name = :name AND deviceId = :deviceId")
     suspend fun get(name: String, deviceId: Int): Session?

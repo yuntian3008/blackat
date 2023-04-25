@@ -35,7 +35,7 @@ class SignalSessionStore(
     }
 
     override fun storeSession(address: SignalProtocolAddress, record: SessionRecord) = runBlocking {
-        store.insert(Session(Address(address),record))
+        store.upsert(Session(Address(address),record))
     }
 
     override fun containsSession(address: SignalProtocolAddress): Boolean = runBlocking {

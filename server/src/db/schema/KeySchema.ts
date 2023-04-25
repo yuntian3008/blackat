@@ -29,7 +29,6 @@ export interface KeyModel extends Model<IKey> {
 const PreKeySchema = new Schema<IPreKey>({
     keyId: {
         type: Number,
-        unique: true
     },
     publicKey: String,
 })
