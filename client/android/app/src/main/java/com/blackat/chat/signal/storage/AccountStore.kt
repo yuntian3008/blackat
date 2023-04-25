@@ -14,11 +14,13 @@ import java.security.SecureRandom
 class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
 
     companion object {
+        private const val E164: String = "account.e164"
+        private const val LOCAL_DEVICE_ID = "account.local_device_id"
         private const val REGISTRATION_ID: String = "account.registration_id"
 
         private const val KEY_IDENTITY_PUBLIC_KEY = "account.identity_public_key"
         private const val KEY_IDENTITY_PRIVATE_KEY = "account.identity_private_key"
-        
+
         private const val KEY_SIGNED_PREKEY_REGISTERED = "account.signed_prekey_registered"
 
         private const val KEY_ACTIVE_SIGNED_PREKEY_ID = "account.active_signed_prekey_id"
@@ -27,43 +29,69 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         private const val KEY_NEXT_SIGNED_PREKEY_ID = "account.next_signed_prekey_id"
         private const val KEY_NEXT_ONE_TIME_PREKEY_ID = "account.next_one_time_prekey_id"
     }
-    suspend fun generateRegistrationIdIfNecessary(): Boolean {
-        return try {
-            if (!contain(AccountStore.REGISTRATION_ID))
-                putInteger(AccountStore.REGISTRATION_ID,KeyHelper.generateRegistrationId(false))
-            true
-        } catch (_: Exception) {
-            false
-        }
+
+    suspend fun generateRegistrationIdIfNecessary() {
+        if (!contain(AccountStore.REGISTRATION_ID))
+            putInteger(AccountStore.REGISTRATION_ID, KeyHelper.generateRegistrationId(false))
     }
 
-    suspend fun getRegistrationId() : Int {
+    suspend fun getRegistrationId(): Int {
         generateRegistrationIdIfNecessary()
-        return getInteger(AccountStore.REGISTRATION_ID,0)
+        return getInteger(AccountStore.REGISTRATION_ID, 0)!!
     }
 
-    private suspend fun generateNextSignedPreKeyIdIfNecessary() {
-            if (!contain(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID))
-                putInteger(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID,SecureRandom().nextInt(Medium.MAX_VALUE))
+    suspend fun generateNextSignedPreKeyIdIfNecessary() {
+        if (!contain(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID))
+            putInteger(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
     }
 
     suspend fun getNextSignedPreKeyId(): Int {
         generateNextSignedPreKeyIdIfNecessary()
-        return getInteger(KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+        return getInteger(KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))!!
     }
+
     suspend fun setNextSignedPreKeyId(value: Int) {
         putInteger(KEY_NEXT_SIGNED_PREKEY_ID, value = value)
     }
 
-    private suspend fun generateNextOneTimePreKeyIdIfNecessary() {
+    suspend fun setE164(value: String) {
+        if (!contain(E164)) {
+            putString(E164, value)
+        }
+    }
+
+    suspend fun resetE164() {
+        remove(E164)
+    }
+
+    suspend fun getE164(): String? {
+        return getString(E164,null)
+    }
+
+    suspend fun setLocalDeviceId(value: Int) {
+        if (!contain(LOCAL_DEVICE_ID)) {
+            putInteger(LOCAL_DEVICE_ID, value)
+        }
+    }
+
+    suspend fun resetLocalDeviceId() {
+        remove(LOCAL_DEVICE_ID)
+    }
+
+    suspend fun getLocalDeviceId(): Int? {
+        return getInteger(LOCAL_DEVICE_ID,null)
+    }
+
+    suspend fun generateNextOneTimePreKeyIdIfNecessary() {
         if (!contain(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID))
-            putInteger(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID,SecureRandom().nextInt(Medium.MAX_VALUE))
+            putInteger(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
     }
 
     suspend fun getNextOneTimePreKeyId(): Int {
         generateNextSignedPreKeyIdIfNecessary()
-        return getInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+        return getInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))!!
     }
+
     suspend fun setNextOneTimePreKeyId(value: Int) {
         putInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, value = value)
     }
@@ -81,13 +109,12 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
     }
 
     suspend fun getIdentityKeyPair(): IdentityKeyPair {
-        require(hasIdentityKeyPair()) { "Not set yet!"}
+        require(hasIdentityKeyPair()) { "Not set yet!" }
         return IdentityKeyPair(
                 IdentityKey(getBlob(KEY_IDENTITY_PUBLIC_KEY, null)),
                 Curve.decodePrivatePoint(getBlob(KEY_IDENTITY_PRIVATE_KEY, null))
         )
     }
-
 
 
 //    @get:JvmName("aciPreKeys")

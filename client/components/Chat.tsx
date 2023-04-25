@@ -13,7 +13,7 @@ export enum ConversationState {
 export type ChatProps = {
     items: ChatItemProps[],
     conversationState: ConversationState,
-    partnerIsTyping: string[],
+    partnerIsTyping?: string[],
 }
 
 export default function Chat({
@@ -44,9 +44,9 @@ export default function Chat({
                 inverted
                 // showsVerticalScrollIndicator={false}
                 data={items}
-                ListHeaderComponent={(
-                    <ChatItem kind={ChatItemKind.typing} data={partnerIsTyping} />
-                )}
+                ListHeaderComponent={
+                    partnerIsTyping !== undefined ? <ChatItem kind={ChatItemKind.typing} data={partnerIsTyping} /> : undefined
+                }
                 renderItem={({ item, index, separators }) => {
 
                     if (item.kind === ChatItemKind.bubble) {

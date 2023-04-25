@@ -1,15 +1,17 @@
 package com.blackat.chat.data.model
 
-import androidx.room.ColumnInfo
-import androidx.room.Embedded
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.*
 import org.signal.libsignal.protocol.SignalProtocolAddress
 
-data class Address(
+class Address(
         val name: String,
         val deviceId: Int,
-): SignalProtocolAddress(name, deviceId)
+) {
+        @Ignore
+        constructor(address: SignalProtocolAddress) : this(address.name,address.deviceId)
+
+        fun getSignalProtocolAddress(): SignalProtocolAddress = SignalProtocolAddress(name,deviceId)
+}
 
 @Entity(tableName = "identity_keys")
 data class IdentityKey(

@@ -4,6 +4,7 @@ import { ConversationState } from "./Chat"
 import { format, isToday, parseISO } from "date-fns"
 import { vi } from "date-fns/locale"
 import { TypingAnimation } from 'react-native-typing-animation';
+import { App } from "../../shared/types"
 
 export type Conversation = {
     name: string,
@@ -21,12 +22,23 @@ export enum BubbleChatType {
     image,
     file,
     video,
+    unknown
 }
 
+export function toBubbleChatType(type: number): BubbleChatType {
+    switch (type) {
+        case App.MessageType.TEXT:
+            return BubbleChatType.text
+        case App.MessageType.IMAGE:
+            return BubbleChatType.image
 
+        default:
+            return BubbleChatType.unknown
+    }
+}
 
 export type Partner = {
-    avatar: string,
+    avatar?: string,
     name: string,
 }
 
@@ -36,8 +48,8 @@ export type BubbleChat = {
     conversationState?: ConversationState,
     sentAt: string,
     partner?: Partner
-    onPress: () => void,
-    onLongPress: () => void,
+    onPress?: () => void,
+    onLongPress?: () => void,
 }
 
 const StateBadge = ({ state }: { state: ConversationState }): JSX.Element => {
@@ -102,12 +114,25 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
                 flexDirection: 'column',
                 maxWidth: '70%',
             }}>
-                {partner && <Avatar.Image size={28} source={{ uri: partner.avatar }} style={{
-                    position: 'absolute',
-                    top: -12,
-                    left: -12,
-                    zIndex: 1
-                }} />}
+                {partner && (
+                    partner.avatar ?
+                        <Avatar.Image
+                            size={28}
+                            source={{ uri: partner.avatar }}
+                            style={{
+                                position: 'absolute',
+                                top: -12,
+                                left: -12,
+                                zIndex: 1
+                            }} /> :
+                        <Avatar.Icon size={28}
+                            icon={"account"}
+                            style={{
+                                position: 'absolute',
+                                top: -12,
+                                left: -12,
+                                zIndex: 1
+                            }} />)}
 
                 <Card
                     onPress={onPress}

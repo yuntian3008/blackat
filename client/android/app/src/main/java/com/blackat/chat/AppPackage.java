@@ -2,6 +2,7 @@ package com.blackat.chat;
 
 import androidx.annotation.NonNull;
 
+import com.blackat.chat.module.AppModule;
 import com.blackat.chat.module.SignalModule;
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.NativeModule;
@@ -19,6 +20,7 @@ public class AppPackage implements ReactPackage {
         List<NativeModule> modules = new ArrayList<>();
 
         modules.add(new SignalModule(reactApplicationContext));
+        modules.add(new AppModule(reactApplicationContext));
 
         return modules;
     }

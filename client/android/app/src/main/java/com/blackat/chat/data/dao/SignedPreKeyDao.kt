@@ -15,11 +15,11 @@ interface SignedPreKeyDao {
     suspend fun get(keyId: Int): SignedPreKey
 
     @Query("SELECT * FROM signed_pre_key")
-    suspend fun getAll(): List<SignedPreKey>
+    suspend fun getAll(): MutableList<SignedPreKey>
 
     @Query("SELECT EXISTS (SELECT * FROM signed_pre_key WHERE keyId = :keyId)")
     suspend fun contain(keyId: Int): Boolean
 
-    @Query("DELETE FROM signed_pre_key WHERE keyId = :KeyId")
+    @Query("DELETE FROM signed_pre_key WHERE keyId = :keyId")
     suspend fun delete(keyId: Int)
 }

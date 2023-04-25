@@ -1,8 +1,7 @@
 package com.blackat.chat.data.model
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room.*
+import com.blackat.chat.data.converter.Converters
 
 @Entity(tableName = "key_value", indices = [
     Index(value = ["key"], unique = true)
@@ -14,6 +13,17 @@ data class KeyValue(
         ) {
     @PrimaryKey(autoGenerate = true)
     var id: Int? = null
+
+    @Ignore
+    constructor(key: String, value: Int) : this(key,value.toString(), INTEGER_TYPE)
+    @Ignore
+    constructor(key: String, value: Float) : this(key,value.toString(), FLOAT_TYPE)
+    @Ignore
+    constructor(key: String, value: Long) : this(key,value.toString(), LONG_TYPE)
+    @Ignore
+    constructor(key: String, value: Boolean) : this(key,value.toString(), BOOLEAN_TYPE)
+    @Ignore
+    constructor(key: String, value: ByteArray) : this(key,Converters().fromByteArray(value), BLOB_TYPE)
 
     companion object {
         const val STRING_TYPE = 0

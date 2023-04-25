@@ -1,19 +1,29 @@
-import { Model, Schema, Types } from "mongoose";
+import { Model, ObjectId, Schema, Types } from "mongoose";
 import Device from "../model/Device";
 import Counter from "../model/Counter";
+import User from "../model/User";
+import { IDevice } from "./DeviceSchema";
+import { LoggedInfo, Signal } from "../../../../shared/types";
+import Key from "../model/Key";
+import Mailbox from "../model/Mailbox";
 
 export interface IUser {
     phoneNumber: string,
     devices: Types.Array<Types.ObjectId>
+    // activeDevice?: number 
 }
 
 export interface UserModel extends Model<IUser> {
-    login(phoneNumber: string, deviceUniqueId: string): Promise<LoginResult>;
+    // updateState(info: LoggedInfo, connected: boolean): Promise<boolean>
+    login(phoneNumber: string, registrationId: number): Promise<LoginResult>;
+    findKeyWithoutDevice(phoneNumber: string): Promise<Types.ObjectId>
+    // readyToStart(phoneNumber: string): Promise<boolean>
+    getAddresses(phoneNumber: string): Promise<Array<Signal.Types.SignalProtocolAddress>>
 }
 
 export type LoginResult = {
-    isNewUser: boolean,
-    isNewDevice: boolean,
+    success: boolean
+    info?: LoggedInfo
 }
 
 const UserSchema = new Schema<IUser, UserModel>({
@@ -22,45 +32,140 @@ const UserSchema = new Schema<IUser, UserModel>({
     },
     devices: [{
         type: Schema.Types.ObjectId, ref: 'Device'
-    }]
+    }],
+    // activeDevice: {
+    //     type: Number,
+    //     default: null
+    // }
 })
 
-UserSchema.static('login', function login(phoneNumber: string, deviceUniqueId: string) {
-    let model = this;
-    return new Promise<LoginResult>(function (resolve, reject) {
-        let result: LoginResult = {
-            isNewDevice: true,
-            isNewUser: true,
+UserSchema.static('login',async function login(e164: string, registrationId: number): Promise<LoginResult> {
+
+    let result: LoginResult = {
+        success: false,
+        info: {
+            isNewUser: false,
+            isNewDevice: false,
+            deviceId: null,
+            e164: null
         }
-        model.findOneAndUpdate(
-            { phoneNumber: phoneNumber },
-            { phoneNumber: phoneNumber }, {
-            upsert: true,
-            new: true,
-        }).then((user) => {
-            console.log(user.isNew)
-            const device = new Device({
-                user: user._id,
-                deviceUniqueId: deviceUniqueId
-            })
+    }
 
-            device.save()
-            .then(() => {
-                result.isNewDevice = true
+    try {
+        var user = await this.findOne({ phoneNumber: e164 })
+        if (user === null) {
+            const newUser = new User({
+                phoneNumber: e164
             })
-            .catch(() => {
-                Counter.des(user._id,'device')
-                result.isNewDevice = false
-            })
-            .finally(() => {
-                resolve(result)
-            })
-        }).catch((err) => {
-            reject(err)
+            user = await newUser.save()
+            result.info.isNewUser = true
+        }
+        const userWithDevice = await user.populate({
+            path: 'devices',
+            match: {
+                registrationId: registrationId
+            },
+            select: {
+                deviceId: 1
+            }
         })
-    })
+        const devices = userWithDevice.devices
+        let device
+        if (devices.length == 0) {
+
+            const newDevice = await new Device({
+                user: user._id,
+                registrationId: registrationId
+            }).save()
+            
+            const newKey = await new Key({
+                device: newDevice._id
+            }).save()
+
+            const newMailbox = await new Mailbox({
+                box: [],
+                device: newDevice._id
+            }).save()
+            
+
+            userWithDevice.devices.push(newDevice)
+            await userWithDevice.save()
+
+            newDevice.key = newKey._id
+            newDevice.mailbox = newMailbox._id
+            await newDevice.save()
+
+            result.info.isNewDevice = true
+            device = newDevice
+        } else {
+            device = await Device.findById(devices[0])
+        }
+        result.success = true
+        result.info.e164 = e164
+        result.info.deviceId = device.deviceId
+        
+        // const noDeviceIsConnecting = this.updateState(result.info, true)
+        // if (!noDeviceIsConnecting) return {
+        //     success: false,
+        // }
+            
+     
+    } catch (e) {
+        result.success = false,
+        result.info = undefined
+        console.log('[login]')
+        console.log(e)
+    }
+
+    return result
+    
 
 })
 
+// UserSchema.static('updateState',async function updateState(info: LoggedInfo, connected: boolean): Promise<boolean> {
+//     const user = await User.findOne({
+//         phoneNumber: info.e164
+//     })
+//     if (connected && user.activeDevice !== null) {
+//         return user.activeDevice === info.deviceId
+//     }
+//     user.activeDevice = connected ? info.deviceId : null,
+//     await user.save()
+//     return true
+// })
+
+// UserSchema.static('readyToStart', async function readyToStart(phoneNumber: string): Promise<boolean> {
+//     const user = await this.findOne({phoneNumber: phoneNumber})
+//     if(user === null) return false
+
+//     if(user.activeDevice === null) return false
+
+//     const device = await Device.findOne({
+//         user: user._id,
+//         deviceId: user.activeDevice
+//     })
+
+//     // if(device === null) return false
+
+//     const checkKey = await Key.check(device._id)
+
+//     return !checkKey.needIdentityKey && !checkKey.needPreKeys && !checkKey.needSignedPreKey
+// })
+
+UserSchema.static('getAddresses',async function getAddresses(phoneNumber: string): Promise<Array<Signal.Types.SignalProtocolAddress>> {
+    const result: Array<Signal.Types.SignalProtocolAddress> = []
+    const user = await this.findOne({phoneNumber: phoneNumber}).populate('devices')
+    if(user === null) return result
+
+    for (let index = 0; index < user.devices.length; index++) {
+        const deviceId = user.devices[index];
+        const device = await Device.findById(deviceId)
+        result.push({
+            e164: phoneNumber,
+            deviceId: device.deviceId
+        })
+    }
+    return result
+})
 
 export default UserSchema

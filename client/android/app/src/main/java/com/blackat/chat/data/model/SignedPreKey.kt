@@ -1,9 +1,6 @@
 package com.blackat.chat.data.model
 
-import androidx.room.Embedded
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room.*
 import org.signal.libsignal.protocol.ecc.Curve
 import org.signal.libsignal.protocol.ecc.ECKeyPair
 import org.signal.libsignal.protocol.ecc.ECPrivateKey
@@ -21,9 +18,15 @@ data class SignedPreKey(
         @Embedded
         val keyPair: ECKeyPairModel,
         val signature: ByteArray
-) : SignedPreKeyRecord(keyId, timestamp, keyPair , signature) {
+) {
     @PrimaryKey(autoGenerate = true)
     var id: Int? = null
+
+    @Ignore
+    constructor(keyId: Int, signedPreKey: SignedPreKeyRecord) : this(keyId, signedPreKey.timestamp, ECKeyPairModel(signedPreKey.keyPair), signedPreKey.signature)
+
+    fun getSignedPreKeyRecord(): SignedPreKeyRecord = SignedPreKeyRecord(keyId,timestamp,keyPair.getECKeyPair(),signature)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

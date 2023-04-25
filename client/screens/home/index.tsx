@@ -4,7 +4,7 @@ import Conversation from "./conversation";
 import Contact from "./contact";
 import { useEffect } from "react";
 import { FAB, IconButton } from "react-native-paper";
-import { Alert, SafeAreaView, View } from "react-native";
+import { Alert, NativeEventEmitter, NativeModules, SafeAreaView, View } from "react-native";
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import Header, { HeaderItems, HeaderProps, MenuItems } from "../../components/Header";
 
@@ -17,6 +17,7 @@ export type RootHomeTabParamList = {
 const Tab = createMaterialTopTabNavigator<RootHomeTabParamList>()
 
 function Home({ navigation, route }: HomeProps): JSX.Element {
+
 
     return (
         <Tab.Navigator screenOptions={{

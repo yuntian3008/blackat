@@ -1,26 +1,92 @@
-import { SafeAreaView, View } from "react-native";
+import { NativeModules, SafeAreaView, View } from "react-native";
 import { Avatar, List, Searchbar, Text, TextInput } from "react-native-paper";
 import { NewContactProps } from "..";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isValidPhoneNumber, parsePhoneNumber, CountryCode } from "libphonenumber-js/mobile";
+import SignalModule from "../../native/android/SignalModule";
+import socket from "../../utils/socket";
+import AppModule from "../../native/android/AppModule";
+
+const { CURRENT_COUNTRY_CODE } = SignalModule.getConstants();
+
+type SearchResult = {
+    found: boolean,
+    phoneNumber: string,
+}
+
+
 
 export default function NewContact({ navigation }: NewContactProps): JSX.Element {
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
+
+    const createConversation = async (searchResult: SearchResult) => {
+
+        navigation.navigate('ChatZone', {
+            e164: searchResult.phoneNumber
+        })
+
+    }
+
+    useEffect(() => {
+        console.log(CURRENT_COUNTRY_CODE)
+        if (isValidPhoneNumber(searchQuery, CURRENT_COUNTRY_CODE)) {
+            const phone = parsePhoneNumber(searchQuery, CURRENT_COUNTRY_CODE)
+            socket.emit('isSomeOneThere', phone.number, (result) => {
+                setSearchResult({
+                    found: result,
+                    phoneNumber: phone.number
+                })
+            })
+        }
+        else {
+            setSearchResult(null)
+        }
+
+
+    }, [searchQuery]);
 
     const onChangeSearch = (query: string) => setSearchQuery(query);
     return (
         <SafeAreaView>
-            <View style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 20 }}>
+            <View style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingVertical: 20 }}>
                 <Searchbar
+                    style={{ marginHorizontal: 20 }}
+                    keyboardType="phone-pad"
                     placeholder="Nhập số điện thoại"
                     onChangeText={onChangeSearch}
                     value={searchQuery}
                 />
-                <List.Item
-                    onPress={() => console.log('test')}                
-                    style={{ width: "100%" }}
-                    title="+8412345676"
-                    left={props => <Avatar.Image size={48} source={{ uri: "https://doodleipsum.com/700x700/avatar-3" }} />}
-                />
+                {
+                    searchResult !== null
+                        ?
+                        <List.Item
+                            onPress={searchResult.found ? () => {
+                                createConversation(searchResult)
+                            } : undefined}
+                            style={{ width: "100%", paddingHorizontal: 20 }}
+                            title={searchResult.phoneNumber}
+                            titleStyle={{
+                                fontWeight: "700"
+                            }}
+                            descriptionStyle={{
+                                fontWeight: "100",
+                                fontSize: 16
+                            }}
+                            description={searchResult.found ? "Bắt đầu trò chuyện" : "Nguời dùng chưa sử dụng Blackat"}
+                            left={props => <Avatar.Icon size={48} icon={searchResult.found ? "account" : "account-question"} />}
+                        />
+                        :
+                        <Text
+                            variant="labelLarge"
+                            style={{
+                                width: "100%",
+                                padding: 20,
+                                textAlign: 'center'
+                            }}
+                        >Không tìm thấy kết quả</Text>
+
+                }
             </View>
         </SafeAreaView>
     )

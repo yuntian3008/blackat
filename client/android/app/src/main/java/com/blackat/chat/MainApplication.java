@@ -60,8 +60,6 @@ public class MainApplication extends Application implements ReactApplication {
   @Override
   public void onCreate() {
     super.onCreate();
-      IdentityKeyPair identityKeyPair = IdentityKeyPair.generate();
-      Log.d("iden", Arrays.toString(identityKeyPair.getPrivateKey().serialize()));
     SoLoader.init(this, /* native exopackage */ false);
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.

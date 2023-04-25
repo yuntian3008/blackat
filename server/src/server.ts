@@ -7,6 +7,8 @@ import User from "./db/model/User";
 import Connection from "./socket/Connection";
 import { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from "../../shared/types/socket";
 import AuthMiddleware from "./socket/middleware/AuthMiddleware";
+import test, { testMode } from "./test";
+import { ServerSocket } from "socket";
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,11 +21,27 @@ const io = new Server<
 
 io.use(AuthMiddleware)
 
-io.on("connection", Connection);
+export const clients: Map<string, ServerSocket> = new Map()
+
+io.on("connection", (socket) => {
+  Connection(socket)
+  clients.set(socket.data.phoneNumber,socket)
+  console.log(clients.keys.toString())
+  socket.on("disconnect", (reason) => {
+    clients.delete(socket.data.phoneNumber)
+    console.log(socket.data.phoneNumber + ' disconnected (' + reason + ')')
+});
+});
 
 async function run() {
+  
   await connect('mongodb://localhost:27017/blackat')
-  console.log("[SYS] Connected to database")
+  // console.log("[SYS] Connected to database")
+
+  if (testMode) {
+    await test()
+    return
+  }
 
   httpServer.listen(3000, () => {
     console.log('[SYS] Listen at 3000')

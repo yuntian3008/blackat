@@ -4,6 +4,7 @@ import com.blackat.chat.data.converter.Converters
 import com.blackat.chat.data.dao.KeyValueDao
 import com.blackat.chat.data.model.*
 import com.blackat.chat.utils.Base64
+import java.security.Key
 
 
 abstract class SignalStoreValues(private val store: KeyValueDao) {
@@ -17,14 +18,14 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return true
   }
 
-  suspend fun getString(key: String, defaultValue: String): String {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      result = it.value
-    }
-    return result
-  }
+//  suspend fun getString(key: String, defaultValue: String): String {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      result = it.value
+//    }
+//    return result
+//  }
 
   suspend fun getString(key: String, defaultValue: String?): String? {
     val query = store.get(key)
@@ -35,15 +36,15 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return result
   }
 
-  suspend fun getInteger(key: String, defaultValue: Int): Int {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      if (it.type == KeyValue.INTEGER_TYPE)
-      result = it.value.toInt()
-    }
-    return result
-  }
+//  suspend fun getInteger(key: String, defaultValue: Int): Int {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      if (it.type == KeyValue.INTEGER_TYPE)
+//      result = it.value.toInt()
+//    }
+//    return result
+//  }
 
   suspend fun getInteger(key: String, defaultValue: Int?): Int? {
     val query = store.get(key)
@@ -55,15 +56,15 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return result
   }
 
-  suspend fun getLong(key: String, defaultValue: Long): Long {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      if (it.type == KeyValue.LONG_TYPE)
-        result = it.value.toLong()
-    }
-    return result
-  }
+//  suspend fun getLong(key: String, defaultValue: Long): Long {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      if (it.type == KeyValue.LONG_TYPE)
+//        result = it.value.toLong()
+//    }
+//    return result
+//  }
 
   suspend fun getLong(key: String, defaultValue: Long?): Long? {
     val query = store.get(key)
@@ -75,15 +76,15 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return result
   }
 
-  suspend fun getBoolean(key: String, defaultValue: Boolean): Boolean {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      if (it.type == KeyValue.BOOLEAN_TYPE)
-        result = it.value.toBoolean()
-    }
-    return result
-  }
+//  suspend fun getBoolean(key: String, defaultValue: Boolean): Boolean {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      if (it.type == KeyValue.BOOLEAN_TYPE)
+//        result = it.value.toBoolean()
+//    }
+//    return result
+//  }
 
   suspend fun getBoolean(key: String, defaultValue: Boolean?): Boolean? {
     val query = store.get(key)
@@ -95,15 +96,15 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return result
   }
 
-  suspend fun getFloat(key: String, defaultValue: Float): Float {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      if (it.type == KeyValue.FLOAT_TYPE)
-        result = it.value.toFloat()
-    }
-    return result
-  }
+//  suspend fun getFloat(key: String, defaultValue: Float): Float {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      if (it.type == KeyValue.FLOAT_TYPE)
+//        result = it.value.toFloat()
+//    }
+//    return result
+//  }
 
   suspend fun getFloat(key: String, defaultValue: Float?): Float? {
     val query = store.get(key)
@@ -115,15 +116,15 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
     return result
   }
 
-  suspend fun getBlob(key: String, defaultValue: ByteArray): ByteArray {
-    val query = store.get(key)
-    var result = defaultValue
-    query?.let {
-      if (it.type == KeyValue.BLOB_TYPE)
-        result = Base64.decode(it.value)
-    }
-    return result
-  }
+//  suspend fun getBlob(key: String, defaultValue: ByteArray): ByteArray {
+//    val query = store.get(key)
+//    var result = defaultValue
+//    query?.let {
+//      if (it.type == KeyValue.BLOB_TYPE)
+//        result = Base64.decode(it.value)
+//    }
+//    return result
+//  }
 
   suspend fun getBlob(key: String, defaultValue: ByteArray?): ByteArray? {
     val query = store.get(key)
@@ -162,27 +163,27 @@ abstract class SignalStoreValues(private val store: KeyValueDao) {
 //  }
 
   suspend fun putBoolean(key: String, value: Boolean) {
-    store.putBool(KeyValueBool(key,value))
+    store.put(KeyValue(key,value))
   }
 
   suspend fun putFloat(key: String, value: Float) {
-    store.putFloat(KeyValueFloat(key,value))
+    store.put(KeyValue(key,value))
   }
 
   suspend fun putInteger(key: String, value: Int) {
-    store.putInt(KeyValueInt(key,value))
+    store.put(KeyValue(key,value))
   }
 
   suspend fun putLong(key: String, value: Long) {
-    store.putLong(KeyValueLong(key,value))
+    store.put(KeyValue(key,value))
   }
 
   suspend fun putString(key: String, value: String) {
-    store.putString(KeyValue(key,value))
+    store.put(KeyValue(key,value))
   }
 
   suspend fun putBlob(key: String, value: ByteArray) {
-    store.putBlob(KeyValueBlob(key,value))
+    store.put(KeyValue(key,value))
   }
 
 

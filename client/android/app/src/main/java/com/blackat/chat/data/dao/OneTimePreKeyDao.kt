@@ -18,6 +18,6 @@ interface OneTimePreKeyDao {
     @Query("SELECT EXISTS (SELECT * FROM one_time_pre_key WHERE keyId = :keyId)")
     suspend fun contain(keyId: Int): Boolean
 
-    @Query("DELETE FROM one_time_pre_key WHERE keyId = :KeyId")
+    @Query("DELETE FROM one_time_pre_key WHERE keyId = :keyId")
     suspend fun delete(keyId: Int)
 }

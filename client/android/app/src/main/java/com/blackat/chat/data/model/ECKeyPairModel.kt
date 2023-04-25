@@ -7,4 +7,8 @@ import org.signal.libsignal.protocol.ecc.ECPublicKey
 data class ECKeyPairModel(
         val privateKey: ECPrivateKey,
         val publicKey: ECPublicKey,
-) : ECKeyPair(publicKey, privateKey)
+) {
+    constructor (ecKeyPair: ECKeyPair) : this(ecKeyPair.privateKey,ecKeyPair.publicKey)
+
+    fun getECKeyPair(): ECKeyPair = ECKeyPair(publicKey,privateKey)
+}

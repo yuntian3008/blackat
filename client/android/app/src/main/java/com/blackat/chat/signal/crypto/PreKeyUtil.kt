@@ -16,7 +16,7 @@ import java.util.*
 class PreKeyUtil {
     companion object {
         private const val BATCH_SIZE = 100
-        suspend fun generateAndStoreOneTimePreKeys(): List<PreKeyRecord>? {
+        suspend fun generateAndStoreOneTimePreKeys(): List<PreKeyRecord> {
             Log.i("OneTimePreKey", "Generating one-time prekeys...")
             val records: MutableList<PreKeyRecord> = LinkedList()
             val preKeyIdOffset: Int = SignalRepository.account().getNextOneTimePreKeyId()
@@ -31,13 +31,13 @@ class PreKeyUtil {
             return records
         }
 
-        suspend fun generateAndStoreSignedPreKey(): SignedPreKeyRecord? {
+        suspend fun generateAndStoreSignedPreKey(): SignedPreKeyRecord {
             Log.i("SignedPreKey", "Generating signed prekeys...")
             val signedPreKeyId: Int = SignalRepository.account().getNextSignedPreKeyId()
             val privateKey = SignalRepository.account().getIdentityKeyPair().privateKey
             val record = generateSignedPreKey(signedPreKeyId,privateKey)
 
-            SignalRepository.signalPreKey().storeSignedPreKey(
+            SignalRepository.signalSignedPreKey().storeSignedPreKey(
                     signedPreKeyId,
                     record
             )

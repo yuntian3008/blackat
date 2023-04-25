@@ -1,3 +1,5 @@
+import { format, isToday, parseISO } from "date-fns"
+import { vi } from "date-fns/locale"
 import { PressableProps, View } from "react-native"
 import { Avatar, Badge, List, Text, TouchableRipple, useTheme } from "react-native-paper"
 
@@ -6,10 +8,16 @@ export type Conversation = {
     lastMessage: string,
     lastDateTime: string,
     ting?: number,
-    image: string,
+    image?: string,
     self?: boolean
     onPress?: () => void,
     onLongPress?: () => void,
+}
+
+const displaySentAt = (sentAt: string): string => {
+    const date = parseISO(sentAt)
+    const dateFormat = isToday(date) ? "HH:mm" : "dd/MM/yyyy"
+    return format(date, dateFormat, { locale: vi })
 }
 
 export default function ConversationItem({
@@ -47,11 +55,12 @@ export default function ConversationItem({
                         flexDirection: 'column',
                         justifyContent: 'space-between'
                     }}>
-                        <Text>{lastDateTime}</Text>
+                        <Text>{ displaySentAt(lastDateTime)}</Text>
                         {ting && <Badge style={{ backgroundColor: theme.colors.tertiary }}>{ting}</Badge>}
                     </View>
                 )}
-                left={props => <Avatar.Image size={48} source={{ uri: image }} />}
+                left={props => image ? <Avatar.Image size={48} source={{ uri: image }} /> : <Avatar.Icon size={48} icon={"account"}/>
+                }
             />
         // </TouchableRipple>
     )

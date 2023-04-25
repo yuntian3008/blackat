@@ -1,33 +1,50 @@
-import { Middleware } from "socket";
+import { Middleware, ServerSocket } from "socket";
 import { Socket } from "socket.io";
 import { verifyIdToken } from "../../firebase/auth";
 import { DecodedIdToken } from "firebase-admin/auth";
 import User from "../../db/model/User";
+import Key from "../../db/model/Key";
+import Device from "../../db/model/Device";
 
-const AuthMiddleware: Middleware = (socket, next) => {
+const handle = async (socket: ServerSocket): Promise<void> => {
     const idToken = socket.handshake.auth.token
-    const deviceUniqueId = socket.handshake.auth.deviceUniqueId
-    if (!idToken || !deviceUniqueId) {
-        next(new Error("not valid login"))
-        return;
+    const registrationId = socket.handshake.auth.registrationId
+    if (!idToken || !registrationId) {
+        throw new Error("not valid login")
     }
-    verifyIdToken(idToken).then((decodedIdToken) => {
+    try {
+        
+        const decodedIdToken = await verifyIdToken(idToken)
         const phoneNumber = decodedIdToken.phone_number
         socket.data.phoneNumber = phoneNumber
-        socket.data.device = deviceUniqueId
+        socket.data.device = registrationId
 
-        User.login(phoneNumber, deviceUniqueId)
-            .then((value) => {
-                console.log(value)
-                next()
-            })
-            .catch(err => next(err))
+        const loginResult = await User.login(phoneNumber, registrationId)
+        console.log(loginResult)
+        if (loginResult.success == true) {
+            socket.data.logged = loginResult.info
+            console.log('vo dc toi day')
+            const device_id = await Device.getId(loginResult.info.e164, loginResult.info.deviceId)
+            socket.data.deviceObjectId = device_id
+            
+            socket.data.bundleRequirement = await Key.check(device_id)
+            
+            
+            return
+        }
+        else throw Error("failed to login")
 
+    } catch(err) {
+        throw err
+    }
+    
+}
 
-
-    }).catch((err) => {
-        console.log(err.code)
-        next(new Error("error"))
+const AuthMiddleware: Middleware = (socket, next) => {
+    handle(socket).then(() => {
+        next()
+    }).catch((e: Error) => {
+        next(e)
     })
 }
 
