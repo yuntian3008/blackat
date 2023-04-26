@@ -25,6 +25,10 @@ export default function Connection(socket: ServerSocket) {
                     
             })
         }
+        else {
+            clients.set(socket.data.phoneNumber,socket)
+            console.log(socket.data.logged.e164 + " vào trạng thái online")
+        }
     }).catch((e) => {
         console.log("[CHECK MAIL]")
         console.log(e)

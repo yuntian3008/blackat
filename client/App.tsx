@@ -212,6 +212,7 @@ function App(): JSX.Element {
     }
 
     const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
+      
       var plainText = await SignalModule.decrypt(sender, message.data)
       if (typeof plainText !== "string") {
         const error = (plainText as SignalError)
@@ -254,8 +255,10 @@ function App(): JSX.Element {
 
     const findErrorMails = async (messages: Array<Server.Mail>): Promise<Array<Server.Mail>> => {
       var errorMessage: Array<Server.Mail> = []
+      console.log("Có " + messages.length + " mail cần check")
       for (let message of messages) {
         try {
+          console.log("Đang check " + message.sender.e164)
           await saveMessageToLocal(message.sender, message.message)
           AppModule.ting(message.sender.e164)
         } catch (e) {
@@ -267,6 +270,7 @@ function App(): JSX.Element {
 
     const onMailBox = (messages: Array<Server.Mail>, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
       findErrorMails(messages).then((errors) => {
+        console.log("Đã check mail với " + errors.length + " mail bị lỗi")
         callback({
           isProcessed: true
         })
