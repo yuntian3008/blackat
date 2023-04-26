@@ -34,4 +34,6 @@ interface PrivateConversationDao {
     @Query("SELECT * FROM private_conversation")
     fun getAllFlow(): Flow<List<PrivateConversation>>
 
+    @Query("DELETE FROM private_conversation")
+    suspend fun deleteAll()
 }

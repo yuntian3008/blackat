@@ -15,7 +15,7 @@ import store from './store';
 
 
 export default function Main() {
-    SignalModule.testBasicPreKeyV3()
+    // SignalModule.testBasicPreKeyV3()
     SignalModule.onFirstEverAppLaunch()
     .then((v) => {
         console.log(v ? "Đã khởi tạo lần đầu thành công": "Khởi tạo lần đầu thất bại")

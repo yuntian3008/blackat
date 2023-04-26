@@ -62,6 +62,9 @@ class SignalRepository(signalDatabase: SignalDatabase) {
         suspend fun signalSignedPreKey() = getInstance().signalSignedPreKeyStore
         suspend fun signalSession() = getInstance().signalSessionStore
         suspend fun signalStore() = getInstance().signalStore
-        suspend fun clearAllTables() = getInstance().database.clearAllTables()
+        suspend fun clearAllTables() {
+            getInstance().database.identityDao().deleteAll()
+            getInstance().database.sessionDao().deleteAllTable()
+        }
     }
 }

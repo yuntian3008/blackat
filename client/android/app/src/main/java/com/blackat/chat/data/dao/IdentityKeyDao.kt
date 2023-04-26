@@ -12,4 +12,7 @@ interface IdentityKeyDao {
 
     @Query("SELECT identityKey FROM identity_keys WHERE name = :name AND deviceId = :deviceId")
     suspend fun get(name: String, deviceId: Int): ByteArray?
+
+    @Query("DELETE FROM identity_keys")
+    suspend fun deleteAll()
 }

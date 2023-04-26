@@ -29,4 +29,7 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE name = :name")
     suspend fun deleteAll(name: String)
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAllTable()
 }

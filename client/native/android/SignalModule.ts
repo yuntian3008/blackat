@@ -10,7 +10,7 @@ interface SignalModuleInterface {
     getConstants(): {
         CURRENT_COUNTRY_CODE: CountryCode
     }
-    testBasicPreKeyV3(): void
+    // testBasicPreKeyV3(): void
     clearAllTables(): Promise<void>
     logged(phonenumber: String, deviceId: number): void
     onFirstEverAppLaunch(): Promise<boolean>

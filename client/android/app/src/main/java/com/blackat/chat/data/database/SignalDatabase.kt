@@ -15,7 +15,7 @@ import com.blackat.chat.data.model.*
     OneTimePreKey::class,
     SignedPreKey::class,
     Session::class
-], version = 8)
+], version = 100)
 @TypeConverters(Converters::class)
 abstract class SignalDatabase : RoomDatabase() {
     abstract fun keyValueDao(): KeyValueDao
@@ -34,6 +34,7 @@ abstract class SignalDatabase : RoomDatabase() {
                 synchronized(SignalDatabase::class.java)
                 {
                     if (instance == null) {
+//                        context.applicationContext.deleteDatabase(SignalDatabase.DATABASE_NAME);
                         instance = Room.databaseBuilder(context, SignalDatabase::class.java,
                                 DATABASE_NAME)
                                 .fallbackToDestructiveMigration()

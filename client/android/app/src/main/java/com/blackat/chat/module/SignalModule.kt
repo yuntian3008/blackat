@@ -47,101 +47,6 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
         return constants
     }
 
-    private val ALICE_ADDRESS = SignalProtocolAddress("+14151111111", 1)
-    private val BOB_ADDRESS = SignalProtocolAddress("+14152222222", 1)
-
-    @ReactMethod()
-    fun testBasicPreKeyV3() {
-        try {
-            val aliceIdentityKeyPair = IdentityKeyPair.generate()
-            val bobIdentityKeyPair = IdentityKeyPair.generate()
-            val aliceRegistrationId = KeyHelper.generateRegistrationId(false)
-            val bobRegistrationId = KeyHelper.generateRegistrationId(false)
-            val aliceStore: SignalProtocolStore = InMemorySignalProtocolStore(aliceIdentityKeyPair,aliceRegistrationId)
-            val aliceSessionBuilder = SessionBuilder(aliceStore, BOB_ADDRESS)
-            val bobStore: SignalProtocolStore = InMemorySignalProtocolStore(bobIdentityKeyPair, bobRegistrationId)
-            val bobPreKeyPair = Curve.generateKeyPair()
-            val bobSignedPreKeyPair = Curve.generateKeyPair()
-            val bobSignedPreKeySignature = Curve.calculateSignature(bobStore.identityKeyPair.privateKey,
-                    bobSignedPreKeyPair.publicKey.serialize())
-            val bobPreKey = PreKeyBundle(bobStore.localRegistrationId, 1,
-                    31337, bobPreKeyPair.publicKey,
-                    22, bobSignedPreKeyPair.publicKey,
-                    bobSignedPreKeySignature,
-                    bobStore.identityKeyPair.publicKey)
-            aliceSessionBuilder.process(bobPreKey)
-            assertTrue("Alice có session từ bob",aliceStore.containsSession(BOB_ADDRESS))
-            assertTrue("Alice có session từ bob, sessionVersion = 3",aliceStore.loadSession(BOB_ADDRESS).sessionVersion == 3)
-            val originalMessage = "Good, fast, cheap: pick two"
-
-            val aliceSessionCipher = SessionCipher(aliceStore, BOB_ADDRESS)
-            val outgoingMessage = aliceSessionCipher.encrypt(originalMessage.toByteArray())
-            assertTrue("Alice tạo cipher có type là PREKEY",outgoingMessage.type == CiphertextMessage.PREKEY_TYPE)
-
-            val outGoingMessageToDelivery = Base64.encodeBytes(outgoingMessage.serialize())
-
-            val inGoingMessageToDelivery = Base64.decode(outGoingMessageToDelivery)
-
-            val incomingMessage = PreKeySignalMessage(inGoingMessageToDelivery)
-            bobStore.storePreKey(31337, PreKeyRecord(bobPreKey.preKeyId, bobPreKeyPair))
-            bobStore.storeSignedPreKey(22, SignedPreKeyRecord(22, System.currentTimeMillis(), bobSignedPreKeyPair, bobSignedPreKeySignature))
-            val bobSessionCipher = SessionCipher(bobStore, ALICE_ADDRESS)
-            val plaintext = bobSessionCipher.decrypt(incomingMessage)
-            assertTrue("Bob sau khi decrypt có session của Alice", bobStore.containsSession(ALICE_ADDRESS))
-            assertTrue("Bob có session từ Alice, sessionVersion = 3",bobStore.loadSession(ALICE_ADDRESS).sessionVersion == 3)
-            assertTrue("Bob có session từ Alice, aliceBaseKey != null",bobStore.loadSession(ALICE_ADDRESS).aliceBaseKey != null)
-            assertTrue("Tin nhắn ban đầu khớp với tin nhắn đã decrypt",originalMessage == String(plaintext!!))
-            val bobOutgoingMessage = bobSessionCipher.encrypt(originalMessage.toByteArray())
-            assertTrue("Bob encrypt tin tiếp theo, cipher có type là WHIPSPER",bobOutgoingMessage.type == CiphertextMessage.WHISPER_TYPE)
-            val bobOutGoingMessageToDelivery = Base64.encodeBytes(bobOutgoingMessage.serialize())
-
-            val bobInGoingMessageToDelivery = Base64.decode(bobOutGoingMessageToDelivery)
-
-            val alicePlaintext = aliceSessionCipher.decrypt(SignalMessage(bobInGoingMessageToDelivery))
-            assertTrue("Tin nhắn tiếp theo khớp với tin nhắn tiếp theo đã decrypt",String(alicePlaintext) == originalMessage)
-        } catch (e: Exception) {
-            Log.e("testV3ERROR", e.toString())
-        }
-
-//        runInteraction(aliceStore, bobStore)
-//        aliceStore = TestInMemorySignalProtocolStore()
-//        aliceSessionBuilder = SessionBuilder(aliceStore, BOB_ADDRESS)
-//        aliceSessionCipher = SessionCipher(aliceStore, BOB_ADDRESS)
-//        bobPreKeyPair = Curve.generateKeyPair()
-//        bobSignedPreKeyPair = Curve.generateKeyPair()
-//        bobSignedPreKeySignature = Curve.calculateSignature(bobStore.identityKeyPair.privateKey, bobSignedPreKeyPair.publicKey.serialize())
-//        bobPreKey = PreKeyBundle(bobStore.localRegistrationId,
-//                1, 31338, bobPreKeyPair.publicKey,
-//                23, bobSignedPreKeyPair.publicKey, bobSignedPreKeySignature,
-//                bobStore.identityKeyPair.publicKey)
-//        bobStore.storePreKey(31338, PreKeyRecord(bobPreKey.preKeyId, bobPreKeyPair))
-//        bobStore.storeSignedPreKey(23, SignedPreKeyRecord(23, System.currentTimeMillis(), bobSignedPreKeyPair, bobSignedPreKeySignature))
-//        aliceSessionBuilder.process(bobPreKey)
-//        outgoingMessage = aliceSessionCipher.encrypt(originalMessage.toByteArray())
-//        try {
-//            plaintext = bobSessionCipher.decrypt(PreKeySignalMessage(outgoingMessage.serialize()))
-//            throw AssertionError("shouldn't be trusted!")
-//        } catch (uie: UntrustedIdentityException) {
-//            bobStore.saveIdentity(ALICE_ADDRESS, PreKeySignalMessage(outgoingMessage.serialize()).identityKey)
-//        }
-//        plaintext = bobSessionCipher.decrypt(PreKeySignalMessage(outgoingMessage.serialize()))
-//        assertTrue(String(plaintext) == originalMessage)
-//        bobPreKey = PreKeyBundle(bobStore.localRegistrationId, 1,
-//                31337, Curve.generateKeyPair().publicKey,
-//                23, bobSignedPreKeyPair.publicKey, bobSignedPreKeySignature,
-//                aliceStore.identityKeyPair.publicKey)
-//        try {
-//            aliceSessionBuilder.process(bobPreKey)
-//            throw AssertionError("shoulnd't be trusted!")
-//        } catch (uie: UntrustedIdentityException) {
-//            // good
-//        }
-    }
-
-    private fun assertTrue(title: String, condition: Boolean) {
-        Log.d("testV3TEST","[${title}]: $condition")
-    }
-
 
     @ReactMethod
     fun requireRegistrationId(promise: Promise) {
@@ -379,7 +284,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 promise.resolve(response)
             } catch (e: Exception) {
                 Log.e("decrypt",e.message ?: "")
-                promise.reject(e)
+                promise.reject("error",e.message)
             }
         }
     }

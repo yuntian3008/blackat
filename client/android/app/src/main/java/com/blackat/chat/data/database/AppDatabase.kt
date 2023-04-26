@@ -12,7 +12,7 @@ import com.blackat.chat.data.model.*
 @Database(entities = [
     PrivateConversation::class,
     PrivateMessage::class
-], version = 2)
+], version = 100)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun privateConversationDao(): PrivateConversationDao
@@ -28,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                 synchronized(AppDatabase::class.java)
                 {
                     if (instance == null) {
+//                        context.applicationContext.deleteDatabase(DATABASE_NAME);
                         instance = Room.databaseBuilder(context, AppDatabase::class.java,
                                 DATABASE_NAME)
                                 .fallbackToDestructiveMigration()

@@ -122,13 +122,13 @@ function App(): JSX.Element {
     const conversationWithMessageChanged = (data: Array<AppTypes.Types.ConversationWithMessages>) => {
       dispatch(setConversationData(data))
       setDatabaseInitializing(false)
-      console.log("Đã flow dữ liệu database")
-      console.log(data)
-      console.log(conversationData)
+      // console.log("Đã flow dữ liệu database")
+      // console.log(data)
+      // console.log(conversationData)
     }
     const eventEmiter = new NativeEventEmitter(NativeModules.AppModule)
     const eventListener = eventEmiter.addListener('conversationWithMessageChanged', conversationWithMessageChanged)
-    console.log("Đang lắng nghe")
+    // console.log("Đang lắng nghe")
     return () => {
       eventListener.remove()
     }
@@ -221,7 +221,7 @@ function App(): JSX.Element {
         })
       }
       catch (e) {
-        console.log("Nhận tin nhắn thất bại")
+        console.log("Decrypt tin nhắn thất bại")
         console.log(sender)
         console.log(e)
         throw e

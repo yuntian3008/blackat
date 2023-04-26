@@ -44,6 +44,9 @@ class AppRepository(appDatabase: AppDatabase) {
         suspend fun privateConversation() = getInstance().privateConversationStore
         suspend fun privateMessage() = getInstance().privateMessageStore
 
-        suspend fun clearAllTables() = getInstance().database.clearAllTables()
+        suspend fun clearAllTables() {
+            getInstance().database.privateConversationDao().deleteAll()
+            getInstance().database.privateMessageDao().deleteAll()
+        }
     }
 }
