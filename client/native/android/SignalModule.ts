@@ -1,6 +1,6 @@
 import { CountryCode } from "libphonenumber-js/types"
 import { NativeModules } from "react-native"
-import { Server, Signal } from "../../../shared/types"
+import { Server, Signal, SignalError } from "../../../shared/types"
 
 const { SignalModule } = NativeModules
 
@@ -20,7 +20,7 @@ interface SignalModuleInterface {
     requireRegistrationId(): Promise<number>
     performKeyBundle(e164: string, preKeyBundle: Signal.Types.PreKeyBundle): Promise<boolean>
     encrypt(address: Signal.Types.SignalProtocolAddress, data: String): Promise<Server.CipherMessage>
-    decrypt(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage): Promise<string>
+    decrypt(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage): Promise<string|SignalError>
     missingSession(addresses: Array<Signal.Types.SignalProtocolAddress>): Promise<Array<Signal.Types.SignalProtocolAddress>>
     requireLocalAddress(): Promise<Signal.Types.SignalProtocolAddress>
 }

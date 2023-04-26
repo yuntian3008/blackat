@@ -41,15 +41,16 @@ import Search from './screens/search';
 import Header, { HeaderItems, MenuItems } from './components/Header';
 import NewContact from './screens/newcontact';
 import ChatZone from './screens/chatzone';
-import socket from './utils/socket';
+import socket, { outGoingMessage } from './utils/socket';
 import DeviceInfo from 'react-native-device-info';
-import { App as AppTypes, BundleRequirement, LoggedInfo, Server, Signal, SocketEvent } from '../shared/types';
+import { App as AppTypes, BundleRequirement, LoggedInfo, Server, Signal, SocketEvent, SignalError } from '../shared/types';
 import SignalModule from './native/android/SignalModule';
 import store from './store';
 import { useAppDispatch, useAppSelector } from './hooks';
 import { setConversationData } from './redux/ConversationWithMessages';
 import { da } from 'date-fns/locale';
 import AppModule from './native/android/AppModule';
+import { format, formatISO } from 'date-fns';
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -211,21 +212,32 @@ function App(): JSX.Element {
     }
 
     const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
-      try {
-        const plainText = await SignalModule.decrypt(sender, message.data)
-        await AppModule.saveMessage(sender.e164, {
-          data: plainText,
-          owner: AppTypes.MessageOwner.PARTNER,
-          timestamp: message.timestamp,
-          type: message.type
-        })
+      var plainText = await SignalModule.decrypt(sender, message.data)
+      if (typeof plainText !== "string") {
+        const error = (plainText as SignalError)
+        if (error.code == "need-encrypt") {
+          const localAddress = await SignalModule.requireLocalAddress()
+          const emptyCipher = await SignalModule.encrypt(sender, "")
+          const emptyMessage: Server.Message = {
+            data: {
+              cipher: emptyCipher.cipher,
+              type: emptyCipher.type
+            },
+            type: AppTypes.MessageType.EMPTY,
+            timestamp: formatISO(new Date())
+          }
+
+          const result = await outGoingMessage(localAddress, sender, emptyMessage)
+          plainText = await SignalModule.decrypt(sender, message.data)
+          if (typeof plainText !== "string") throw new Error("cannot-encrypt")
+        }
       }
-      catch (e) {
-        console.log("Decrypt tin nhắn thất bại")
-        console.log(sender)
-        console.log(e)
-        throw e
-      }
+      await AppModule.saveMessage(sender.e164, {
+        data: plainText as string,
+        owner: AppTypes.MessageOwner.PARTNER,
+        timestamp: message.timestamp,
+        type: message.type
+      })
     }
 
     const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
@@ -240,22 +252,29 @@ function App(): JSX.Element {
       })
     }
 
-    const onMailBox = (message: Array<Server.Mail>, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
-      try {
-        message.forEach((v) => {
-          saveMessageToLocal(v.sender,v.message).then(() => {
-            AppModule.ting(v.sender.e164)
-          }).catch((e) => {
-              ToastAndroid.show("Giải mã thất bại tin nhắn từ " + v.sender.e164,ToastAndroid.SHORT)
-          })
-        })
+    const findErrorMails = async (messages: Array<Server.Mail>): Promise<Array<Server.Mail>> => {
+      var errorMessage: Array<Server.Mail> = []
+      for (let message of messages) {
+        try {
+          await saveMessageToLocal(message.sender, message.message)
+          AppModule.ting(message.sender.e164)
+        } catch (e) {
+          errorMessage.push(message)
+        }
+      }
+      return errorMessage
+    }
+
+    const onMailBox = (messages: Array<Server.Mail>, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
+      findErrorMails(messages).then((errors) => {
         callback({
           isProcessed: true
         })
-      } catch (e) {
-        console.log("Nhận tin nhắn hộp thư thất bại")
-        console.log(e)
-      }
+        if (errors.length > 0) {
+          console.log("Các mail xử lí thất bại")
+          console.log(errors)
+        }
+      })
       
     }
 
@@ -267,7 +286,7 @@ function App(): JSX.Element {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('inComingMessage', inComingMessage)
-    socket.on("sendMailbox", onMailBox )
+    socket.on("sendMailbox", onMailBox)
 
     return () => {
       console.log("off socket")
@@ -277,7 +296,7 @@ function App(): JSX.Element {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('inComingMessage', inComingMessage)
-      socket.off("sendMailbox", onMailBox )
+      socket.off("sendMailbox", onMailBox)
 
     };
   }, []);

@@ -58,6 +58,7 @@ export namespace App {
     export namespace MessageType {
         export const TEXT = 0
         export const IMAGE = 1
+        export const EMPTY = -1
     }
     export namespace MessageOwner {
         export const SELF = "SELF"
@@ -100,6 +101,11 @@ export namespace Server {
         sender: Signal.Types.SignalProtocolAddress,
         message: Message
     }
+}
+
+export interface SignalError {
+    code: string,
+    message?: string,
 }
 
 export namespace Signal {

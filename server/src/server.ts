@@ -25,7 +25,6 @@ export const clients: Map<string, ServerSocket> = new Map()
 
 io.on("connection", (socket) => {
   Connection(socket)
-  clients.set(socket.data.phoneNumber,socket)
   // console.log(clients.keys.toString())
   socket.on("disconnect", (reason) => {
     clients.delete(socket.data.phoneNumber)

@@ -16,6 +16,7 @@ export default function Connection(socket: ServerSocket) {
         if(v.length > 0) {
             socket.emit('sendMailbox', v, (result) => {
                 if (result.isProcessed)
+                    clients.set(socket.data.phoneNumber,socket)
                     Mailbox.clearAll(socket.data.deviceObjectId)
             })
         }

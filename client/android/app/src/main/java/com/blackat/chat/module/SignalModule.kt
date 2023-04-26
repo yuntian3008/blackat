@@ -261,8 +261,12 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${sender.name},${sender.deviceId}] TYPE: $typeCipherMessage")
                     val plaintext: String = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
                         AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
-                            if (it.messages.size > 1)
-                                throw Exception("wait-response")
+                            if (it.messages.isNotEmpty()) {
+                                val error = Arguments.createMap()
+                                error.putString("code","need-encrypt")
+                                return@withContext error
+                            }
+
                         }
                         val inComingMessage = PreKeySignalMessage(dataCipherMessage)
                         Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
@@ -283,8 +287,8 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                 promise.resolve(response)
             } catch (e: Exception) {
-                Log.e("decrypt",e.message ?: "")
-                promise.reject("error",e.message)
+                Log.e("DebugV3",e.message ?: "")
+
             }
         }
     }
