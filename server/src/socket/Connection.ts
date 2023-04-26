@@ -99,15 +99,16 @@ export default function Connection(socket: ServerSocket) {
 
     socket.on('outGoingMessage', (sender, address, message, callback) => {
         console.log([...clients.entries()])
+        console.log("Có tin nhắn loại " + message.type)
         if (clients.has(address.e164)) {
-            console.log('Có tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [TYPE: ' + message.data.type + ']')
+            console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
             clients.get(address.e164).emit('inComingMessage', sender, message, (inComingMessageResult) => {
                 callback({
                     sentAt: inComingMessageResult.isProcessed ? SocketEvent.SendAt.DEVICE : SocketEvent.SendAt.FAILED
                 })
             })
         } else {
-            console.log('Có tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang ngoại tuyến [TYPE: ' + message.data.type + ']')
+            console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang ngoại tuyến [CIPHERTYPE: ' + message.data.type + ']')
             Device.getId(address.e164, address.deviceId)
                 .then((device) => {
                     Mailbox.add(device._id, {
