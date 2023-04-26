@@ -12,12 +12,17 @@ export default function Connection(socket: ServerSocket) {
 
     socket.emit('logged', socket.data.logged)
     socket.emit('requireBundle', socket.data.bundleRequirement)
+    console.log(socket.data.logged.e164 + " bắt đầu quá trình check mail")
     Mailbox.getAll(socket.data.deviceObjectId).then((v) => {
         if(v.length > 0) {
             socket.emit('sendMailbox', v, (result) => {
-                if (result.isProcessed)
+                if (result.isProcessed) {
+                    console.log(socket.data.logged.e164 + " HOÀN TẤT quá trình check mail")
                     clients.set(socket.data.phoneNumber,socket)
+                    console.log(socket.data.logged.e164 + " vào trạng thái online")
                     Mailbox.clearAll(socket.data.deviceObjectId)
+                }
+                    
             })
         }
     }).catch((e) => {

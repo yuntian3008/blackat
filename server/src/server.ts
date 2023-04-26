@@ -22,6 +22,9 @@ const io = new Server<
 io.use(AuthMiddleware)
 
 export const clients: Map<string, ServerSocket> = new Map()
+export const addClient = (e164: string, client: ServerSocket) => {
+  clients.set(e164,client)
+}
 
 io.on("connection", (socket) => {
   Connection(socket)
