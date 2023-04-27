@@ -22,6 +22,14 @@ class ReadableMapUtils {
             )
         }
 
+        fun getFileInfo(map: ReadableMap): FileInfo {
+            return FileInfo(
+                    map.getString("name")!!,
+                    map.getString("type")!!,
+                    map.getString("size")!!,
+            )
+        }
+
         fun getAddress(map: ReadableMap): SignalProtocolAddress {
                 return SignalProtocolAddress(
                         map.getString("e164"),

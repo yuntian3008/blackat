@@ -20,7 +20,9 @@ interface SignalModuleInterface {
     requireRegistrationId(): Promise<number>
     performKeyBundle(e164: string, preKeyBundle: Signal.Types.PreKeyBundle): Promise<boolean>
     encrypt(address: Signal.Types.SignalProtocolAddress, data: String): Promise<Server.CipherMessage>
-    decrypt(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage): Promise<string|SignalError>
+    encryptFile(address: Signal.Types.SignalProtocolAddress, uri: String): Promise<Server.CipherMessage>
+    decrypt(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage, forcePreKey: boolean): Promise<string|SignalError>
+    decryptFile(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage, fileInfo: Server.FileInfo, forcePreKey: boolean): Promise<string|SignalError>
     missingSession(addresses: Array<Signal.Types.SignalProtocolAddress>): Promise<Array<Signal.Types.SignalProtocolAddress>>
     requireLocalAddress(): Promise<Signal.Types.SignalProtocolAddress>
 }

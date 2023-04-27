@@ -28,7 +28,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Login from './screens/login';
 import * as eva from '@eva-design/eva';
 import { ApplicationProvider, IconRegistry } from '@ui-kitten/components';
-import { EvaIconsPack } from '@ui-kitten/eva-icons';
 import { default as MyBrandTheme } from './custom-theme.json'
 import Home from './screens/home';
 import Splash from './screens/splash';
@@ -212,8 +211,12 @@ function App(): JSX.Element {
     }
 
     const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
-      
-      var plainText = await SignalModule.decrypt(sender, message.data)
+      let plainText
+      if (message.fileInfo !== undefined) {
+        plainText = await SignalModule.decryptFile(sender,message.data,message.fileInfo,false)
+      }
+      else
+        plainText = await SignalModule.decrypt(sender, message.data,false)
       if (typeof plainText !== "string") {
         const error = (plainText as SignalError)
         if (error.code == "need-encrypt") {
@@ -229,10 +232,15 @@ function App(): JSX.Element {
           }
 
           const result = await outGoingMessage(localAddress, sender, emptyMessage)
-          plainText = await SignalModule.decrypt(sender, message.data)
+          if (message.fileInfo !== undefined) {
+            plainText = await SignalModule.decryptFile(sender,message.data,message.fileInfo,true)
+          }
+          else
+            plainText = await SignalModule.decrypt(sender, message.data,true)
           if (typeof plainText !== "string") throw new Error("cannot-encrypt")
         }
       }
+      if (message.type == AppTypes.MessageType.EMPTY) return;
       await AppModule.saveMessage(sender.e164, {
         data: plainText as string,
         owner: AppTypes.MessageOwner.PARTNER,
@@ -247,6 +255,8 @@ function App(): JSX.Element {
           isProcessed: true
         })
       }).catch((e) => {
+        console.log("Bắt đc nè")
+        console.log(e)
         callback({
           isProcessed: false
         })
@@ -324,7 +334,6 @@ function App(): JSX.Element {
 
   return (
     <>
-      <IconRegistry icons={EvaIconsPack} />
       <ApplicationProvider {...eva} theme={{ ...eva.light, ...MyBrandTheme }}>
         <SafeAreaProvider>
           {/* <NavigationContainer theme={scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}> */}

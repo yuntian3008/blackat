@@ -1,7 +1,6 @@
 import { Alert, SafeAreaView, Text, TextInput, ToastAndroid, View } from "react-native";
 
 import { Ref, useEffect, useRef, useState } from "react";
-import { IndexPath, Layout, Select, SelectItem, Button, Input, Icon, Spinner } from "@ui-kitten/components";
 
 import { VerifyOtpCodeProps } from "../..";
 import { LoadingIndicator, LoadingOverlay } from "../../../components/Utils";
@@ -49,7 +48,7 @@ function VerifyOtpCode({ navigation, route }: VerifyOtpCodeProps): JSX.Element {
         <SafeAreaView>
             {loading && <LoadingOverlay/>}
             {/* UI kittin + style */}
-            <Layout style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 20 }}>
+            <View style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 20 }}>
                 <Text className="text-3xl self-start text-neutral-700">
                     Nhập mã xác minh {code}
                 </Text>
@@ -80,7 +79,7 @@ function VerifyOtpCode({ navigation, route }: VerifyOtpCodeProps): JSX.Element {
                     handleChange={onChangeCode}
                     numberOfInputs={6}
                 />
-            </Layout>
+            </View>
         </SafeAreaView>
     )
 }

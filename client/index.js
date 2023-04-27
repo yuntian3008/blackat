@@ -11,6 +11,7 @@ import { darkTheme, lightTheme } from './theme';
 import SignalModule from './native/android/SignalModule';
 import { Provider } from 'react-redux';
 import store from './store';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 
 
@@ -26,7 +27,9 @@ export default function Main() {
     return (
         <Provider store={store}>
             <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
-                <App />
+                <GestureHandlerRootView  style={{ flex: 1 }}>
+                    <App />
+                </GestureHandlerRootView>
             </PaperProvider>
         </Provider>
         

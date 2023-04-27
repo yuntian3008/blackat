@@ -11,6 +11,12 @@ data class CipherMessage(
         public val cipher: String
 )
 
+data class FileInfo(
+        val fileName: String,
+        val fileType: String,
+        val fileSize: String,
+)
+
 class WritableMapUtils {
     companion object {
         fun getPrivateConversation(privateConversation: PrivateConversation): WritableMap {

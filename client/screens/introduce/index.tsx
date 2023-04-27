@@ -1,11 +1,38 @@
 
-import { Dimensions, Image, SafeAreaView, Text, View } from "react-native";
+import { Dimensions, Image, PermissionsAndroid, SafeAreaView, Text, View } from "react-native";
 // import { Button } from "../../components/Button";
 import { IntroduceProps } from "..";
 import { Button } from "react-native-paper";
 
 function Introduce({ navigation }: IntroduceProps): JSX.Element {
     const dimensions = Dimensions.get("window")
+
+
+    const requestPermission = async () => {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            {
+              title: 'Cool Photo App Camera Permission',
+              message:
+                'Cool Photo App needs access to your camera ' +
+                'so you can take awesome pictures.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          console.log(granted)
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('You can use the camera');
+          } else {
+            console.log('Camera permission denied');
+          }
+          navigation.navigate('Login')
+        } catch (err) {
+          console.warn(err);
+        }
+      };
 
     return (
         <SafeAreaView>
@@ -18,9 +45,7 @@ function Introduce({ navigation }: IntroduceProps): JSX.Element {
                 {/* UI kittin + style */}
                 <Button mode="contained"
                     style={{ marginTop: 'auto', width: '100%', borderRadius: 90 }}
-                    onPress={() => {
-                        navigation.navigate('Login')
-                    }}>
+                    onPress={requestPermission}>
                     Tiếp tục
                 </Button>
             </View>

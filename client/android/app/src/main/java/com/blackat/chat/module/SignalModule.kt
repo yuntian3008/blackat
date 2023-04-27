@@ -14,29 +14,26 @@ import com.blackatclient.Utils
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
 import org.signal.libsignal.protocol.*
-import org.signal.libsignal.protocol.ecc.Curve
 import org.signal.libsignal.protocol.ecc.ECPublicKey
-import org.signal.libsignal.protocol.message.CiphertextMessage
 import org.signal.libsignal.protocol.message.PreKeySignalMessage
-import org.signal.libsignal.protocol.message.SenderKeyMessage
 import org.signal.libsignal.protocol.message.SignalMessage
 import org.signal.libsignal.protocol.state.PreKeyBundle
-import org.signal.libsignal.protocol.state.PreKeyRecord
-import org.signal.libsignal.protocol.state.SignalProtocolStore
-import org.signal.libsignal.protocol.state.SignedPreKeyRecord
-import org.signal.libsignal.protocol.state.impl.InMemorySignalProtocolStore
-import org.signal.libsignal.protocol.util.KeyHelper
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileInputStream
 import java.util.*
 
 
 class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(context), LifecycleEventListener {
 
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-//    private val db = Room.databaseBuilder(context, SignalDatabase::class.java, "SignalDatabase").build()
+
+    //    private val db = Room.databaseBuilder(context, SignalDatabase::class.java, "SignalDatabase").build()
 //    private val keyValueDao = db.keyValueDao()
     init {
         context.addLifecycleEventListener(this)
     }
+
     override fun getName(): String {
         return "SignalModule"
     }
@@ -104,8 +101,8 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     oneTimePreKeyList.forEach() {
                         val writableMap: WritableMap = WritableNativeMap()
                         val key = Base64.encodeBytes(it.keyPair.publicKey.serialize())
-                        writableMap.putInt("id",it.id)
-                        writableMap.putString("key",key)
+                        writableMap.putInt("id", it.id)
+                        writableMap.putString("key", key)
 
                         writableArray.pushMap(writableMap)
                     }
@@ -134,9 +131,9 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                     val key = Base64.encodeBytes(signedPreKey.keyPair.publicKey.serialize())
                     val signature = Base64.encodeBytes(signedPreKey.signature)
-                    writableMap.putInt("id",signedPreKey.id)
-                    writableMap.putString("key",key)
-                    writableMap.putString("signature",signature)
+                    writableMap.putInt("id", signedPreKey.id)
+                    writableMap.putString("key", key)
+                    writableMap.putString("signature", signature)
 
 
                     return@withContext writableMap
@@ -176,6 +173,60 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
         }
     }
 
+    private suspend fun encrypt(address: ReadableMap, data: ByteArray): WritableMap {
+        val targetAddress = ReadableMapUtils.getAddress(address)
+        if (!SignalRepository.signalStore().containsSession(targetAddress))
+            throw Exception("cannot-found-session")
+
+        val sessionCipher = SessionCipher(SignalRepository.signalStore(), targetAddress)
+
+
+        val outGoingMessage = sessionCipher.encrypt(data)
+        Log.d("DebugV3", "Đã mã hóa tin nhắn [${targetAddress.name},${targetAddress.deviceId}] TYPE: ${outGoingMessage.type}")
+
+        val cipherMessage = CipherMessage(
+                outGoingMessage.type,
+                Base64.encodeBytes(outGoingMessage.serialize())
+        )
+
+        return WritableMapUtils.getCipherMessage(cipherMessage)
+    }
+
+    @ReactMethod
+    fun encryptFile(address: ReadableMap, uri: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val filePath = uri.replace("file://", "")
+
+                    val file = File(filePath)
+                    val inputStream = FileInputStream(file)
+                    val outputStream = ByteArrayOutputStream()
+                    val buffer = ByteArray(1024)
+
+                    var length: Int
+                    while (inputStream.read(buffer).also { length = it } != -1) {
+                        outputStream.write(buffer, 0, length)
+                    }
+
+                    val byteArray = outputStream.toByteArray()
+//                    val bitmap = BitmapFactory.decodeFile(filePath) ?: return@withContext null
+//                    val stream = ByteArrayOutputStream()
+//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+//                    val byteArray = stream.toByteArray()
+
+                    return@withContext encrypt(address, byteArray)
+
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
 
     @ReactMethod
     fun encrypt(address: ReadableMap, data: String, promise: Promise) {
@@ -185,36 +236,9 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    val targetAddress = ReadableMapUtils.getAddress(address)
-                    if (!SignalRepository.signalStore().containsSession(targetAddress))
-                        throw Exception("cannot-found-session")
-
-                    val sessionCipher = SessionCipher(SignalRepository.signalStore(),targetAddress)
-
-
-                    val outGoingMessage = sessionCipher.encrypt(data.toByteArray())
-                    Log.d("DebugV3", "Đã mã hóa tin nhắn [${targetAddress.name},${targetAddress.deviceId}] TYPE: ${outGoingMessage.type}")
-
-                    val cipherMessage = CipherMessage(
-                            outGoingMessage.type,
-                            Base64.encodeBytes(outGoingMessage.serialize())
-                    )
-
-                    return@withContext WritableMapUtils.getCipherMessage(cipherMessage)
-//                    if (outGoingMessage.type == SignalMessage.PREKEY_TYPE) {
-//                        val preKeySignalMessage = PreKeySignalMessage(outGoingMessage.serialize())
-//                        return@withContext Base64.encodeBytes(preKeySignalMessage.serialize())
-//                    }
-//                    else {
-//                        val signalMessage = SignalMessage(outGoingMessage.serialize())
-//                        return@withContext Base64.encodeBytes(signalMessage.serialize())
-//                    }
-
-
+                    return@withContext encrypt(address, data.toByteArray())
 
                 }
-//                val targetAddress = ReadableMapUtils.getAddress(address)
-//                Log.d("DebugV3", "Đã mã hóa tin nhắn [${targetAddress.name},${targetAddress.deviceId}]: $response")
                 promise.resolve(response)
             } catch (e: Exception) {
                 promise.reject(e)
@@ -238,63 +262,171 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
             } catch (e: Exception) {
                 promise.resolve(e)
-                Log.e("clearAllTables",e.message ?: "")
+                Log.e("clearAllTables", e.message ?: "")
             }
         }
     }
 
+//    @ReactMethod
+//    fun decrypt(address: ReadableMap, cipher: ReadableMap, forcePreKey: Boolean, promise: Promise) {
+//        scope.launch {
+//            try {
+//                val s = ReadableMapUtils.getAddress(address)
+//                Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${s.name},${s.deviceId}]: $cipher")
+//                val response = withContext(context = Dispatchers.IO) {
+//                    if (reactApplicationContext == null)
+//                        throw Exception("context null")
+//
+//                    val cipherMessage = ReadableMapUtils.getCipherMessage(cipher)
+//                    val typeCipherMessage = cipherMessage.type
+//                    val dataCipherMessage = Base64.decode(cipherMessage.cipher)
+//                    val sender = ReadableMapUtils.getAddress(address)
+//                    val sessionCipher = SessionCipher(SignalRepository.signalStore(), sender)
+//                    Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${sender.name},${sender.deviceId}] TYPE: $typeCipherMessage")
+//                    val plaintext: String = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
+//                        if (!forcePreKey)
+//                            AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
+//                                if (it.messages.isNotEmpty()) {
+//                                    val error = Arguments.createMap()
+//                                    error.putString("code", "need-encrypt")
+//                                    return@withContext error
+//                                }
+//
+//                            }
+//                        val inComingMessage = PreKeySignalMessage(dataCipherMessage)
+//                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
+//                        val plaintextContent = sessionCipher.decrypt(inComingMessage)
+//                        String(plaintextContent)
+//
+//                    } else {
+//                        val inComingMessage = SignalMessage(dataCipherMessage)
+//                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
+//                        val plaintextContent = sessionCipher.decrypt(inComingMessage)
+//                        String(plaintextContent)
+//                    }
+//
+//                    return@withContext plaintext
+//
+//
+//                }
+//
+//                promise.resolve(response)
+//            } catch (e: Exception) {
+//                Log.e("DebugV3", e.message ?: "")
+//                val error = Arguments.createMap()
+//                error.putString("code", "need-encrypt")
+//                promise.resolve(error)
+//            }
+//        }
+//    }
+
+    private suspend fun decrypt(address: ReadableMap, cipher: ReadableMap, forcePreKey: Boolean): Any {
+        val cipherMessage = ReadableMapUtils.getCipherMessage(cipher)
+        val typeCipherMessage = cipherMessage.type
+        val dataCipherMessage = Base64.decode(cipherMessage.cipher)
+        val sender = ReadableMapUtils.getAddress(address)
+        val sessionCipher = SessionCipher(SignalRepository.signalStore(), sender)
+        Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${sender.name},${sender.deviceId}] TYPE: $typeCipherMessage")
+
+        try {
+            val plaintextByteArray: ByteArray = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
+                if (!forcePreKey)
+                    AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
+                        if (it.messages.isNotEmpty()) {
+                            val error = Arguments.createMap()
+                            error.putString("code", "need-encrypt")
+                            return error
+                        }
+
+                    }
+                val inComingMessage = PreKeySignalMessage(dataCipherMessage)
+                Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
+                sessionCipher.decrypt(inComingMessage)
+            } else {
+                val inComingMessage = SignalMessage(dataCipherMessage)
+                Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
+                sessionCipher.decrypt(inComingMessage)
+            }
+
+            return plaintextByteArray
+        } catch (e: Exception) {
+            Log.e("DebugV3", e.message ?: "")
+            val error = Arguments.createMap()
+            error.putString("code", "need-encrypt")
+            return error
+        }
+    }
+
     @ReactMethod
-    fun decrypt(address: ReadableMap, cipher: ReadableMap, promise: Promise) {
+    fun decrypt(address: ReadableMap, cipher: ReadableMap, forcePreKey: Boolean, promise: Promise) {
         scope.launch {
             try {
-                val s = ReadableMapUtils.getAddress(address)
-                Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${s.name},${s.deviceId}]: $cipher")
                 val response = withContext(context = Dispatchers.IO) {
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    val cipherMessage = ReadableMapUtils.getCipherMessage(cipher)
-                    val typeCipherMessage = cipherMessage.type
-                    val dataCipherMessage = Base64.decode(cipherMessage.cipher)
-                    val sender = ReadableMapUtils.getAddress(address)
-                    val sessionCipher = SessionCipher(SignalRepository.signalStore(),sender)
-                    Log.d("DebugV3", "Chuẩn bị giải mã tin nhắn [${sender.name},${sender.deviceId}] TYPE: $typeCipherMessage")
-                    val plaintext: String = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
-                        AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
-                            if (it.messages.isNotEmpty()) {
-                                val error = Arguments.createMap()
-                                error.putString("code","need-encrypt")
-                                return@withContext error
-                            }
-
-                        }
-                        val inComingMessage = PreKeySignalMessage(dataCipherMessage)
-                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
-                        val plaintextContent = sessionCipher.decrypt(inComingMessage)
-                        String(plaintextContent)
-
-                    } else {
-                        val inComingMessage = SignalMessage(dataCipherMessage)
-                        Log.d("DebugV3", "Giải mã tin nhắn [${sender.name},${sender.deviceId}] MESSAGEVERSION: ${inComingMessage.messageVersion}")
-                        val plaintextContent = sessionCipher.decrypt(inComingMessage)
-                        String(plaintextContent)
+                    val result = decrypt(address,cipher,forcePreKey)
+                    if (result is ByteArray) {
+                        return@withContext String(result)
                     }
 
-                    return@withContext plaintext
-
+                    return@withContext result
 
                 }
 
                 promise.resolve(response)
             } catch (e: Exception) {
-                Log.e("DebugV3",e.message ?: "")
-
+                Log.e("DebugV3", e.message ?: "")
             }
         }
     }
 
     @ReactMethod
-    fun performKeyBundle(e164: String,bundle: ReadableMap, promise: Promise) {
+    fun decryptFile(address: ReadableMap, cipher: ReadableMap, fileInfomation: ReadableMap, forcePreKey: Boolean, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val result = decrypt(address,cipher,forcePreKey)
+                    if (result is ByteArray) {
+                        val fileInfo = ReadableMapUtils.getFileInfo(fileInfomation)
+
+                        val fileDir = File(reactApplicationContext.getExternalFilesDir(null), "Blackat")
+                        fileDir.mkdirs()
+
+                        var fileIndex = 0
+                        val maxIndex = 1000
+
+                        var filePath = File(fileDir, "${fileInfo.fileName}.${fileInfo.fileType}")
+                        while (filePath.exists() && fileIndex < maxIndex) {
+                            fileIndex++
+                            filePath = File(fileDir, "${fileInfo.fileName}$fileIndex.${fileInfo.fileType}")
+                        }
+
+                        if (fileIndex == maxIndex) {
+                            throw Exception("Cannot save file: maximum number of index attempts reached")
+                        }
+
+                        filePath.writeBytes(result)
+
+                        return@withContext filePath.path
+                    }
+
+                    return@withContext result
+
+                }
+
+                promise.resolve(response)
+            } catch (e: Exception) {
+                Log.e("DebugV3", e.message ?: "")
+            }
+        }
+    }
+
+    @ReactMethod
+    fun performKeyBundle(e164: String, bundle: ReadableMap, promise: Promise) {
         scope.launch {
             try {
                 val response = withContext(context = Dispatchers.IO) {
@@ -329,7 +461,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                             identityKey
                     )
 
-                    val targetAddress = SignalProtocolAddress(e164,deviceId)
+                    val targetAddress = SignalProtocolAddress(e164, deviceId)
 
 
                     val sessionBuilder = SessionBuilder(
@@ -365,7 +497,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    val pref = reactApplicationContext.getSharedPreferences("application",ReactApplicationContext.MODE_PRIVATE)
+                    val pref = reactApplicationContext.getSharedPreferences("application", ReactApplicationContext.MODE_PRIVATE)
                     val isFirstLaunch = pref.getBoolean("first_launch", true)
                     if (isFirstLaunch) {
                         val result = SignalRepository.onFirstEverAppLaunch()
@@ -373,7 +505,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                         return@withContext result
                     }
 
-                  return@withContext true
+                    return@withContext true
                 }
 
                 promise.resolve(response)
@@ -490,12 +622,10 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
     }
 
 
-
 //    @ReactMethod
 //    fun checkSignalSetup(promise: Promise) {
 //        val isGenerated = RegistrationId.isGenerated(reactApplicationContext)
 //    }
-
 
 
     @ReactMethod

@@ -10,6 +10,9 @@ export interface IMail {
     deviceId: number,
     cipherMessage: string,
     cipherType: number,
+    fileInfoName?: string,
+    fileInfoType?: string,
+    fileInfoSize?: number,
     type: number,
     timestamp: string
 }
@@ -30,6 +33,18 @@ const MailSchema = new Schema<IMail>({
     cipherType: {
         type: Number,
         required: true,
+    },
+    fileInfoName: {
+        type: String,
+        required: false,
+    },
+    fileInfoType: {
+        type: String,
+        required: false,
+    },
+    fileInfoSize: {
+        type: Number,
+        required: false,
     },
     type: {
         type: Number,
@@ -86,6 +101,11 @@ MailboxSchema.static('getAll', async function getAll(device: Types.ObjectId): Pr
                     cipher: iMail.cipherMessage,
                     type: iMail.cipherType
                 },
+                fileInfo: (!iMail.fileInfoName && !iMail.fileInfoType && !iMail.fileInfoSize) ? undefined : {
+                    name: iMail.fileInfoName,
+                    type: iMail.fileInfoType,
+                    size: iMail.fileInfoSize,
+                },
                 type: iMail.type,
                 timestamp: iMail.timestamp
             }
@@ -117,6 +137,9 @@ MailboxSchema.static('add', async function add(device: Types.ObjectId, mail: Ser
         deviceId: mail.sender.deviceId,
         cipherMessage: mail.message.data.cipher,
         cipherType: mail.message.data.type,
+        fileInfoName: mail.message.fileInfo?.name,
+        fileInfoType: mail.message.fileInfo?.type,
+        fileInfoSize: mail.message.fileInfo?.size,
         type: mail.message.type,
         timestamp: mail.message.timestamp
     }

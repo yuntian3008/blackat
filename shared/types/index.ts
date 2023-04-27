@@ -92,8 +92,14 @@ export namespace Server {
         cipher: string,
         type: number,
     }
+    export type FileInfo = {
+        name?: string,
+        type?: string,
+        size?: number
+    }
     export type Message = {
         data: CipherMessage,
+        fileInfo?: FileInfo,
         type: number,
         timestamp: string,
     }
