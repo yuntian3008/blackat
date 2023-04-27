@@ -14,7 +14,7 @@ data class CipherMessage(
 data class FileInfo(
         val fileName: String,
         val fileType: String,
-        val fileSize: String,
+        val fileSize: Int,
 )
 
 class WritableMapUtils {

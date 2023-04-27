@@ -50,6 +50,8 @@ import { setConversationData } from './redux/ConversationWithMessages';
 import { da } from 'date-fns/locale';
 import AppModule from './native/android/AppModule';
 import { format, formatISO } from 'date-fns';
+import Log from './utils/Log';
+import ImageView from './screens/imageview';
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -72,6 +74,9 @@ export type RootStackParamList = {
   ChatZone: {
     e164: string
   },
+  ImageView: {
+    uri: string,
+  }
 };
 
 const emitUploadIdentityKey = (identityKey: Signal.Types.IdentityKey) => {
@@ -213,10 +218,16 @@ function App(): JSX.Element {
     const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
       let plainText
       if (message.fileInfo !== undefined) {
-        plainText = await SignalModule.decryptFile(sender,message.data,message.fileInfo,false)
+        console.log("Nhan dc anh dang decrypt")
+        plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, false)
       }
       else
-        plainText = await SignalModule.decrypt(sender, message.data,false)
+        plainText = await SignalModule.decrypt(sender, message.data, false)
+      if (plainText === null) {
+        Log("GHI FILE THẤT BẠI")
+        ToastAndroid.show('GHI FILE THẤT BẠI', ToastAndroid.SHORT)
+        return
+      }
       if (typeof plainText !== "string") {
         const error = (plainText as SignalError)
         if (error.code == "need-encrypt") {
@@ -233,10 +244,10 @@ function App(): JSX.Element {
 
           const result = await outGoingMessage(localAddress, sender, emptyMessage)
           if (message.fileInfo !== undefined) {
-            plainText = await SignalModule.decryptFile(sender,message.data,message.fileInfo,true)
+            plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
           }
           else
-            plainText = await SignalModule.decrypt(sender, message.data,true)
+            plainText = await SignalModule.decrypt(sender, message.data, true)
           if (typeof plainText !== "string") throw new Error("cannot-encrypt")
         }
       }
@@ -250,6 +261,8 @@ function App(): JSX.Element {
     }
 
     const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
+      Log(`Có tin nhắn mới từ ${sender.e164}`)
+      Log(message)
       saveMessageToLocal(sender, message).then(() => {
         callback({
           isProcessed: true
@@ -289,7 +302,7 @@ function App(): JSX.Element {
           console.log(errors)
         }
       })
-      
+
     }
 
 
@@ -354,66 +367,74 @@ function App(): JSX.Element {
                 </Stack.Group>
 
               ) : (
-                <Stack.Group screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name='Home' component={Home} options={({ navigation }) => ({
-                    headerShown: true,
-                    title: "Blackat",
-                    headerRight: () => {
-                      const menuItems: MenuItems[] = [
-                        {
-                          label: "Dev - clear all tables",
-                          onPress: () => {
-                            SignalModule.clearAllTables().then(() => {
-                              DevSettings.reload()
-                            })
+                <>
+                  <Stack.Group screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name='Home' component={Home} options={({ navigation }) => ({
+                      headerShown: true,
+                      title: "Blackat",
+                      headerRight: () => {
+                        const menuItems: MenuItems[] = [
+                          {
+                            label: "Dev - clear all tables",
+                            onPress: () => {
+                              SignalModule.clearAllTables().then(() => {
+                                DevSettings.reload()
+                              })
+                            }
+                          },
+                          {
+                            label: "Cài đặt",
+                            onPress: () => {
+                              Alert.alert('Cài đặt')
+                            }
+                          },
+                          {
+                            label: "Đăng xuất",
+                            onPress: () => {
+                              auth()
+                                .signOut()
+                                .then(() => console.log('User signed out!'));
+                            }
+                          },
+                        ]
+                        const headerItems: HeaderItems[] = [
+                          {
+                            label: "dots-vertical",
+                            items: menuItems
                           }
-                        },
-                        {
-                          label: "Cài đặt",
-                          onPress: () => {
-                            Alert.alert('Cài đặt')
-                          }
-                        },
-                        {
-                          label: "Đăng xuất",
-                          onPress: () => {
-                            auth()
-                              .signOut()
-                              .then(() => console.log('User signed out!'));
-                          }
-                        },
-                      ]
-                      const headerItems: HeaderItems[] = [
-                        // {
-                        //   label: "magnify",
-                        //   onPress: () => navigation.navigate('Search')
-                        // },
-                        {
-                          label: "dots-vertical",
-                          items: menuItems
-                        }
-                      ]
-                      return (
-                        <Header items={headerItems} />
-                      )
-                    }
-                  })} />
-                  <Stack.Screen name='Search' component={Search} options={{
-                    headerShown: true,
-                    title: "Tìm kiếm"
-                  }} />
-                  <Stack.Screen name='NewContact' component={NewContact} options={{
-                    headerShown: true,
-                    presentation: 'modal',
-                    title: "Chọn người nhắn tin"
-                  }} />
-                  <Stack.Screen name='ChatZone' component={ChatZone} options={{
-                    headerShown: true,
-                    presentation: 'modal',
-                    title: "Chọn người nhắn tin"
-                  }}
-                  />
-                </Stack.Group>
+                        ]
+                        return (
+                          <Header items={headerItems} />
+                        )
+                      }
+                    })} />
+                    <Stack.Screen name='Search' component={Search} options={{
+                      headerShown: true,
+                      title: "Tìm kiếm"
+                    }} />
+                    <Stack.Screen name='NewContact' component={NewContact} options={{
+                      headerShown: true,
+                      presentation: 'modal',
+                      title: "Chọn người nhắn tin"
+                    }} />
+                    <Stack.Screen name='ChatZone' component={ChatZone} options={{
+                      headerShown: true,
+                      presentation: 'modal',
+                      title: "Chọn người nhắn tin"
+                    }}
+                    />
+                  </Stack.Group>
+                  <Stack.Group screenOptions={{ headerShown: true, presentation: 'modal' }}>
+                    <Stack.Screen name ="ImageView" component={ImageView} options={{
+                      headerStyle: {
+                        backgroundColor: 'black'
+                      },
+                      headerTintColor: '#f1f1f1',
+                      title: 'Hình ảnh'
+                    }}/>
+                  </Stack.Group>
+                </>
+
               )
               }
             </Stack.Navigator>

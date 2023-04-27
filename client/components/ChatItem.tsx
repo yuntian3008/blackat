@@ -1,10 +1,12 @@
-import { PressableProps, StyleSheet, View } from "react-native"
+import { Dimensions, Image, ImageBackground, PressableProps, StyleSheet, View, useColorScheme, useWindowDimensions } from "react-native"
 import { Avatar, Badge, Button, Card, Chip, List, Text, TouchableRipple, useTheme } from "react-native-paper"
 import { ConversationState } from "./Chat"
 import { format, isToday, parseISO } from "date-fns"
 import { vi } from "date-fns/locale"
 import { TypingAnimation } from 'react-native-typing-animation';
 import { App } from "../../shared/types"
+import { useState } from "react"
+import { darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../theme"
 
 export type Conversation = {
     name: string,
@@ -102,6 +104,10 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
         return format(date, dateFormat, { locale: vi })
     }
 
+    const { width , height} = useWindowDimensions()
+    const schema = useColorScheme()
+    const theme = useTheme()
+
     return (
         <View style={{
             paddingTop: 12,
@@ -157,8 +163,21 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
                                 )
                             case BubbleChatType.image:
                                 return (
-                                    <Card.Cover source={{ uri: content }} />
+                                    // <Card.Content style={{ flex: 1, backgroundColor: "transparent" }}>
+                                    //     <Image source={{ uri: content, width: (width * 0.6), height: 150 }} resizeMode="cover" borderRadius={20} style={{
+                                    //         flex: 1,
+                                    //     }}/>
+                                    // </Card.Content>
+                                    
+                                    <Card.Cover theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness} source={{ uri: content, width: (width * 0.6), height: 1000 }} resizeMode="cover" style={{
+                                        minWidth: "100%",
+                                        borderRadius: 20,
+                                        overflow: 'hidden',
+                                        borderWidth: 0.5,
+                                        borderColor: theme.colors.secondary
+                                    }} />
                                 )
+                                
                             default:
                                 return null
                         }

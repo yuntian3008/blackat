@@ -30,10 +30,24 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
         conversationData.forEach((v) => {
             if (v.messages.length > 0) {
                 const lastMessage = v.messages[v.messages.length - 1].message
+
+                let contentLastMessage
+                switch (lastMessage.type) {
+                    case App.MessageType.TEXT:
+                        contentLastMessage = lastMessage.data
+                        break;
+                    case App.MessageType.IMAGE:
+                        contentLastMessage = lastMessage.owner == App.MessageOwner.SELF ? "Bạn đã gửi ảnh" : "[Hình ảnh]"
+                        break;
+                
+                    default:
+                        contentLastMessage = "[Tin nhắn]"
+                        break;
+                }
                 ui.push({
                     name: v.conversation.e164,
                     lastDateTime: lastMessage.timestamp,
-                    lastMessage: lastMessage.type == App.MessageType.TEXT ? lastMessage.data : "...",
+                    lastMessage: contentLastMessage,
                     onPress: () => navigation.getParent()?.navigate('ChatZone', {
                         e164: v.conversation.e164
                     }),

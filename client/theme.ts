@@ -3,6 +3,8 @@ import {
     MD3DarkTheme as DarkTheme,
     MD3Theme,
 } from 'react-native-paper';
+
+
 export const lightTheme: MD3Theme = {
     ...LightTheme,
     version: 3,
@@ -59,6 +61,10 @@ export const lightTheme: MD3Theme = {
     }
 };
 
+export const lightThemeWithoutRoundness: MD3Theme = {
+    ...lightTheme,
+    roundness: 0
+}
 
 export const darkTheme: MD3Theme = {
     ...DarkTheme,
@@ -109,3 +115,8 @@ export const darkTheme: MD3Theme = {
         },
     }
 };
+
+export const darkThemeWithoutRoundness: MD3Theme = {
+    ...darkTheme,
+    roundness: 0
+}

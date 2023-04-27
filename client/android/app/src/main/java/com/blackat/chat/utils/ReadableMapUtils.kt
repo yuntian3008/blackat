@@ -26,7 +26,7 @@ class ReadableMapUtils {
             return FileInfo(
                     map.getString("name")!!,
                     map.getString("type")!!,
-                    map.getString("size")!!,
+                    map.getInt("size"),
             )
         }
 

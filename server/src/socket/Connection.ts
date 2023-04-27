@@ -1,12 +1,32 @@
 import { Socket } from "socket.io";
 import Device from "../db/model/Device";
 import { ServerSocket } from "socket";
-import { Server, SessionInfo, SocketEvent } from "../../../shared/types";
-import * as Signal from "@signalapp/libsignal-client"
+import { Server, SessionInfo, Signal, SocketEvent } from "../../../shared/types";
 import User from "../db/model/User";
 import Key from "../db/model/Key";
 import { clients } from "../server";
 import Mailbox from "../db/model/Mailbox";
+
+const offlineHandle = (sender: Signal.Types.SignalProtocolAddress , address: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (outGoingMessageResult: SocketEvent.OutGoingMessageResult) => void) => {
+    console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang ngoại tuyến [CIPHERTYPE: ' + message.data.type + ']')
+            Device.getId(address.e164, address.deviceId)
+                .then((device) => {
+                    Mailbox.add(device._id, {
+                        sender: sender,
+                        message: message
+                    }).then((mailbox) => {
+                        if (mailbox) callback({
+                            sentAt: SocketEvent.SendAt.MAILBOX
+                        })
+                    }).catch((err) => {
+                        console.log(err)
+                        callback({ sentAt: SocketEvent.SendAt.FAILED })
+                    })
+                }).catch((err) => {
+                    console.log(err)
+                    callback({ sentAt: SocketEvent.SendAt.FAILED })
+                })
+}
 
 export default function Connection(socket: ServerSocket) {
 
@@ -97,35 +117,25 @@ export default function Connection(socket: ServerSocket) {
         })
     })
 
+    
+
     socket.on('outGoingMessage', (sender, address, message, callback) => {
         console.log([...clients.entries()])
         console.log("Có tin nhắn loại " + message.type)
         if (clients.has(address.e164)) {
             console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
-            clients.get(address.e164).emit('inComingMessage', sender, message, (inComingMessageResult) => {
-                callback({
-                    sentAt: inComingMessageResult.isProcessed ? SocketEvent.SendAt.DEVICE : SocketEvent.SendAt.FAILED
-                })
+            clients.get(address.e164).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
+                if (err) {
+                    offlineHandle(sender,address,message,callback)
+                }else {
+                    callback({
+                        sentAt: inComingMessageResult.isProcessed ? SocketEvent.SendAt.DEVICE : SocketEvent.SendAt.FAILED
+                    })
+                }
+                
             })
         } else {
-            console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang ngoại tuyến [CIPHERTYPE: ' + message.data.type + ']')
-            Device.getId(address.e164, address.deviceId)
-                .then((device) => {
-                    Mailbox.add(device._id, {
-                        sender: sender,
-                        message: message
-                    }).then((mailbox) => {
-                        if (mailbox) callback({
-                            sentAt: SocketEvent.SendAt.MAILBOX
-                        })
-                    }).catch((err) => {
-                        console.log(err)
-                        callback({ sentAt: SocketEvent.SendAt.FAILED })
-                    })
-                }).catch((err) => {
-                    console.log(err)
-                    callback({ sentAt: SocketEvent.SendAt.FAILED })
-                })
+            offlineHandle(sender,address,message,callback)
         }
     })
 

@@ -16,6 +16,7 @@ import AppModule from "../../native/android/AppModule";
 import { useAppSelector } from "../../hooks";
 import { ImagePickerResponse, launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import BottomSheet, { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from '@gorhom/bottom-sheet';
+import Log from "../../utils/Log";
 
 
 
@@ -79,7 +80,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             label: 'dots-vertical',
             items: [
                 {
-                    label: 'Rời cuộc trò chuyện',
+                    label: 'Xóa trò chuyện',
                     onPress: () => console.log('ok')
                 },
                 {
@@ -96,6 +97,11 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             kind: ChatItemKind.bubble,
             data: {
                 content: message.data,
+                onPress: message.type === App.MessageType.IMAGE ? () => {
+                    navigation.navigate('ImageView', {
+                        uri: message.data
+                    })
+                } : undefined,
                 type: toBubbleChatType(message.type),
                 sentAt: message.timestamp,
                 partner: (message.owner == App.MessageOwner.PARTNER) ? {
@@ -123,17 +129,14 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo) {
         // console.log("startSendMessageToServer")
         const addresses = await syncSession(e164)
-        console.log("synced sessions")
 
         for (let index = 0; index < addresses.length; index++) {
             const address = addresses[index];
             let cipher
             if (fileInfo !== undefined) {
-                console.log("encryptFile")
                 cipher = await SignalModule.encryptFile(address, message.data)
             }
             else {
-                console.log("encrypt")
                 cipher = await SignalModule.encrypt(address, message.data)
             }
             const cipherMessage: Server.Message = {
@@ -142,7 +145,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 timestamp: message.timestamp,
                 fileInfo: fileInfo
             }
-            
+
             const result = await outGoingMessage(localAddress, address, cipherMessage)
             console.log(result)
             // console.log("sendResult[" + address.deviceId + "]: " + result)
@@ -211,13 +214,13 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             const asset = result.assets[0]
 
             const path = asset.fileName?.replace("rn_image_picker_lib_temp_", "")
-            if (path && asset.fileSize && asset.uri) {
-                const fileType = path.split('.').pop()
-                const fileName = path.split('.').shift()
+            if (asset.fileName && asset.type && asset.fileSize && asset.uri) {
+                // const fileType = path.split('.').pop()
+                // const fileName = path.split('.').shift()
 
                 const fileInfo: Server.FileInfo = {
-                    name: fileName,
-                    type: fileType,
+                    name: asset.fileName,
+                    type: asset.type,
                     size: asset.fileSize,
                 }
 
@@ -226,7 +229,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                     data: asset.uri,
                     owner: App.MessageOwner.SELF,
                     timestamp: formatISO(new Date()),
-                    type: App.MessageType.IMAGE 
+                    type: App.MessageType.IMAGE
                 }
                 addMessage(messageData)
                 console.log("dang gui den server")
@@ -242,7 +245,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     }
 
     const openImagePicker = async () => {
-        handleDismissModalPress()
+        // handleDismissModalPress()
+        closeMenu()
         const result = await launchImageLibrary({
             mediaType: 'photo',
             includeBase64: true,
@@ -252,7 +256,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     }
 
     const openCamera = async () => {
-        handleDismissModalPress()
+        // handleDismissModalPress()
+        closeMenu()
         const result = await launchCamera({
             mediaType: 'photo',
             includeBase64: true,
@@ -277,32 +282,41 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     let scrollRef = useRef<ScrollView>(null)
 
 
-    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-    const messageInputRef = useRef<RNTextInput>(null);
+    // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    // const messageInputRef = useRef<RNTextInput>(null);
 
     // variables
-    const snapPoints = useMemo(() => ['50%', '50%'], []);
+    // const snapPoints = useMemo(() => ['50%', '50%'], []);
 
     // callbacks
-    const handlePresentModalPress = useCallback(() => {
-        bottomSheetModalRef.current?.present();
-    }, []);
-    const handleDismissModalPress = useCallback(() => {
-        bottomSheetModalRef.current?.dismiss();
-    }, []);
-    const handleSheetChanges = useCallback((index: number) => {
-        if (index < 0)
-            messageInputRef.current?.focus()
-        else
-            messageInputRef.current?.blur()
-        console.log('handleSheetChanges', index);
-    }, []);
+    // const handlePresentModalPress = useCallback(() => {
+    //     bottomSheetModalRef.current?.present();
+    // }, []);
+    // const handleDismissModalPress = useCallback(() => {
+    //     bottomSheetModalRef.current?.dismiss();
+    // }, []);
+    // const handleSheetChanges = useCallback((index: number) => {
+    //     if (index < 0)
+    //         messageInputRef.current?.focus()
+    //     else
+    //         messageInputRef.current?.blur()
+    //     console.log('handleSheetChanges', index);
+    // }, []);
+
+    const [visible, setVisible] = useState(false);
+
+    const openMenu = () => setVisible(true);
+
+    const closeMenu = () => setVisible(false);
+
+    const color = useTheme()
 
     return (
         <SafeAreaView>
-            <BottomSheetModalProvider>
-                <View style={{ gap: 5, flexDirection: 'column-reverse', alignItems: 'center', height: '100%' }}>
-                    <BottomSheetModal
+            {/* // <BottomSheetModalProvider> */}
+            <View style={{ gap: 5, flexDirection: 'column-reverse', alignItems: 'center', height: '100%' }}>
+                {
+                    /* <BottomSheetModal
                         ref={bottomSheetModalRef}
                         index={1}
                         snapPoints={snapPoints}
@@ -329,43 +343,55 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                                 onPress={openImagePicker}
                             >Thư viện</Button>
                         </BottomSheetView>
-                    </BottomSheetModal>
+                    </BottomSheetModal> */
+                }
 
 
-                    <View style={{ gap: 5, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15, paddingBottom: 15, alignItems: 'center', alignContent: 'center' }}>
-                        <TextInput label={'Nhập tin nhắn'} mode="outlined"
-                            ref={messageInputRef}
-                            autoFocus={true}
-                            value={message}
-                            style={{
-                                flex: 1,
-                                zIndex: 10,
-                            }} onChangeText={onChangeMessage}
-                            onFocus={() => {
-                                setIsTextInputFocused(!isTextInputFocused)
-                            }}
-                            right={(message.length > 0)
-                                ?
-                                <TextInput.Icon onPress={submit} icon={'send'} color={() => theme.colors.primary} />
-                                :
-                                <TextInput.Icon onPress={handlePresentModalPress} icon={'camera-image'} color={() => theme.colors.primary} />
-                                // <TextInput.Icon onPress={handleCamera} icon={'camera'} color={() => theme.colors.primary} />
+                <View style={{ gap: 5, borderTopWidth: 0.5, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15, paddingVertical: 10, alignItems: 'center', alignContent: 'center' }}>
+                    <Menu
+                        visible={visible}
+                        onDismiss={closeMenu}
+                        anchorPosition="top"
+                        anchor={<IconButton size={28} style={{ }} mode="contained" onPress={openMenu} icon={'camera-image'} />}>
+                        <Menu.Item onPress={openCamera} leadingIcon={'camera'} title="Máy ảnh" />
+                        <Menu.Item onPress={openImagePicker} leadingIcon={'image'} title="Thư viện" />
+                    </Menu>
+                    <TextInput label={'Nhập tin nhắn'} mode="outlined"
+                        placeholder="Nhập tin nhắn"
+                        // ref={messageInputRef}
+                        // autoFocus={true}
+                        value={message}
+                        style={{
+                            flex: 1,
+                            zIndex: 10,
+                        }}
+                        onChangeText={onChangeMessage}
+                        onFocus={() => {
+                            setIsTextInputFocused(!isTextInputFocused)
+                        }}
+                        right={(message.length > 0)
+                            ?
+                            <TextInput.Icon onPress={submit} icon={'send'} color={() => theme.colors.primary} />
+                            :
+                            <TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'paperclip'} color={() => theme.colors.primary} />
+                            // <TextInput.Icon onPress={handleCamera} icon={'camera'} color={() => theme.colors.primary} />
 
-                            }
-                            left={<TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'sticker-emoji'} color={(isTextInputFocused) => theme.colors.primary} />}
-                        />
-                        {/* { message.length > 0 && } */}
-                    </View>
-                    <Divider style={{ width: '100%' }} />
+                        }
+                        left={<TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'sticker-emoji'} color={(isTextInputFocused) => theme.colors.primary} />}
+                    />
 
-                    <Chat items={bubbles} conversationState={conversationState} />
-
-
-
+                    {/* { message.length > 0 && } */}
                 </View>
+                {/* <Divider style={{ width: '100%' }} /> */}
+
+                <Chat items={bubbles} conversationState={conversationState} />
 
 
-            </BottomSheetModalProvider>
+
+            </View>
+
+
+            {/* </BottomSheetModalProvider> */}
 
         </SafeAreaView>
     )

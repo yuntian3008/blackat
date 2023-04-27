@@ -22,9 +22,12 @@ interface SignalModuleInterface {
     encrypt(address: Signal.Types.SignalProtocolAddress, data: String): Promise<Server.CipherMessage>
     encryptFile(address: Signal.Types.SignalProtocolAddress, uri: String): Promise<Server.CipherMessage>
     decrypt(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage, forcePreKey: boolean): Promise<string|SignalError>
-    decryptFile(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage, fileInfo: Server.FileInfo, forcePreKey: boolean): Promise<string|SignalError>
+    decryptFile(address: Signal.Types.SignalProtocolAddress, cipher: Server.CipherMessage, fileInfo: Server.FileInfo, forcePreKey: boolean): Promise<string|SignalError|null>
     missingSession(addresses: Array<Signal.Types.SignalProtocolAddress>): Promise<Array<Signal.Types.SignalProtocolAddress>>
     requireLocalAddress(): Promise<Signal.Types.SignalProtocolAddress>
+
+    // test
+    writeFile(path: string): Promise<string>
 }
 
 export default SignalModule as SignalModuleInterface

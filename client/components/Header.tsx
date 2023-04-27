@@ -3,6 +3,7 @@ import { View } from "react-native"
 import { Divider, IconButton, Menu } from "react-native-paper"
 
 export type MenuItems = {
+    icon?: string,
     label: string,
     onPress?: () => void
 } | undefined
@@ -25,7 +26,7 @@ const Header = ({ items }: HeaderProps) => {
     const closeMenu = () => setMenuVisible(false);
 
     return (
-        <View style={{ flexDirection: "row", gap: 0 }}>
+        <View style={{ flexDirection: "row", position: 'relative', gap: 0 }}>
             {
                 items.map((headerItems, index) => (
                     headerItems.items === undefined ?
@@ -38,13 +39,15 @@ const Header = ({ items }: HeaderProps) => {
                                 <IconButton
                                     icon={headerItems.label}
                                     onPress={openMenu} />
-                            }>
+                            }
+                            anchorPosition="bottom"
+                            >
                             {
                                 headerItems.items.map((menuItems, menuIndex) => {
                                     return menuItems !== undefined ? <Menu.Item key={menuIndex} onPress={() => {
                                         menuItems.onPress && menuItems.onPress()
                                         closeMenu()
-                                    }} title={menuItems.label} /> : <Divider key={menuIndex} />
+                                    }} title={menuItems.label} leadingIcon={menuItems.icon} /> : <Divider key={menuIndex} />
                                 })
                             }
                         </Menu>

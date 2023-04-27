@@ -17,3 +17,5 @@ export type HomeProps = StackScreenProps<RootStackParamList, 'Home'>;
 export type SearchProps = StackScreenProps<RootStackParamList, 'Search'>;
 export type NewContactProps = StackScreenProps<RootStackParamList, 'NewContact'>;
 export type ChatZoneProps = StackScreenProps<RootStackParamList, 'ChatZone'>;
+
+export type ImageViewProps = StackScreenProps<RootStackParamList, 'ImageView'>;

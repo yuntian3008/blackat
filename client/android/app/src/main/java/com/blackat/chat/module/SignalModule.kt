@@ -1,7 +1,10 @@
 package com.blackat.chat.module
 
+import android.content.ContentValues
 import android.content.Context
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -377,37 +380,78 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
         }
     }
 
+    private fun writeFile(byteArray: ByteArray, fileName: String, fileType: String): String? {
+        try {
+            var result: String = ""
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = reactApplicationContext.contentResolver
+
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, fileType)
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Blackat")
+                }
+
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+
+                val outputStream = uri?.let {
+                    resolver.openOutputStream(it)
+                }
+
+                outputStream?.use {
+                    it.write(byteArray)
+                }
+
+                val fileDone = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"Blackat/${fileName}")
+
+
+                result = fileDone.absolutePath
+
+            } else {
+                val fileDir = File(reactApplicationContext.getExternalFilesDir(null), "Blackat")
+                fileDir.mkdirs()
+
+                var fileIndex = 0
+                val maxIndex = 1000
+
+                var fileOldVersion = File(fileDir, fileName)
+                while (fileOldVersion.exists() && fileIndex < maxIndex) {
+                    fileIndex++
+                    fileOldVersion = File(fileDir, fileName.replace(".","$fileIndex."))
+                }
+
+                if (fileIndex == maxIndex) {
+                    throw Exception("Cannot save file: maximum number of index attempts reached")
+                }
+
+                fileOldVersion.writeBytes(byteArray)
+
+
+                result = fileOldVersion.path
+            }
+            return "file://$result"
+        } catch (e: Exception) {
+            Log.e("writeFile",e.message,e)
+            return null
+        }
+
+    }
+
     @ReactMethod
-    fun decryptFile(address: ReadableMap, cipher: ReadableMap, fileInfomation: ReadableMap, forcePreKey: Boolean, promise: Promise) {
+    fun decryptFile(address: ReadableMap, cipher: ReadableMap, fileInfo: ReadableMap, forcePreKey: Boolean, promise: Promise) {
         scope.launch {
             try {
                 val response = withContext(context = Dispatchers.IO) {
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
+                    Log.d("DebugV3", "Chuẩn bị giải mã file")
                     val result = decrypt(address,cipher,forcePreKey)
+                    Log.d("DebugV3", "Chuẩn bị giải mã hoàn tất")
                     if (result is ByteArray) {
-                        val fileInfo = ReadableMapUtils.getFileInfo(fileInfomation)
-
-                        val fileDir = File(reactApplicationContext.getExternalFilesDir(null), "Blackat")
-                        fileDir.mkdirs()
-
-                        var fileIndex = 0
-                        val maxIndex = 1000
-
-                        var filePath = File(fileDir, "${fileInfo.fileName}.${fileInfo.fileType}")
-                        while (filePath.exists() && fileIndex < maxIndex) {
-                            fileIndex++
-                            filePath = File(fileDir, "${fileInfo.fileName}$fileIndex.${fileInfo.fileType}")
-                        }
-
-                        if (fileIndex == maxIndex) {
-                            throw Exception("Cannot save file: maximum number of index attempts reached")
-                        }
-
-                        filePath.writeBytes(result)
-
-                        return@withContext filePath.path
+                        val file = ReadableMapUtils.getFileInfo(fileInfo)
+                        Log.d("DebugV3", "Chuẩn bị ghi file")
+                        return@withContext writeFile(result,file.fileName, file.fileType)
                     }
 
                     return@withContext result
