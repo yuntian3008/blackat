@@ -17,7 +17,9 @@ const io = new Server<
   ServerToClientEvents,
   InterServerEvents,
   SocketData
->(httpServer);
+>(httpServer, {
+  maxHttpBufferSize: 15e6
+});
 
 io.use(AuthMiddleware)
 
