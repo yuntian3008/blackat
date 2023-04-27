@@ -123,14 +123,17 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo) {
         // console.log("startSendMessageToServer")
         const addresses = await syncSession(e164)
+        console.log("synced sessions")
 
         for (let index = 0; index < addresses.length; index++) {
             const address = addresses[index];
             let cipher
             if (fileInfo !== undefined) {
+                console.log("encryptFile")
                 cipher = await SignalModule.encryptFile(address, message.data)
             }
             else {
+                console.log("encrypt")
                 cipher = await SignalModule.encrypt(address, message.data)
             }
             const cipherMessage: Server.Message = {
@@ -139,8 +142,9 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 timestamp: message.timestamp,
                 fileInfo: fileInfo
             }
-
+            
             const result = await outGoingMessage(localAddress, address, cipherMessage)
+            console.log(result)
             // console.log("sendResult[" + address.deviceId + "]: " + result)
             if (result.sentAt === SocketEvent.SendAt.FAILED)
                 console.log("GUI TIN NHAN THAT BAI" + address)
@@ -225,13 +229,14 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                     type: App.MessageType.IMAGE 
                 }
                 addMessage(messageData)
+                console.log("dang gui den server")
                 await sendMessageToServer(localAddress!, route.params.e164, messageData, fileInfo)
                 await saveMessageToLocal(messageData)
 
                 setConversationState(ConversationState.sent)
             }
             else {
-
+                console.log("Pick Image Failed")
             }
         }
     }

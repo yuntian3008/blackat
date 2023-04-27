@@ -213,10 +213,6 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     }
 
                     val byteArray = outputStream.toByteArray()
-//                    val bitmap = BitmapFactory.decodeFile(filePath) ?: return@withContext null
-//                    val stream = ByteArrayOutputStream()
-//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-//                    val byteArray = stream.toByteArray()
 
                     return@withContext encrypt(address, byteArray)
 
