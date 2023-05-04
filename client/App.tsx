@@ -190,6 +190,7 @@ function App(): JSX.Element {
     }
 
     function onConnectError(err: Error) {
+      Alert.alert("Lỗi", err.message)
       switch (err.message) {
         case "timeout":
           Alert.alert("Lỗi", "Không thể kết nối với máy chủ")
