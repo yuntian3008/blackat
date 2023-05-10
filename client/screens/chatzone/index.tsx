@@ -165,7 +165,10 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
 
 
     const saveMessageToLocal = async (message: App.Types.MessageData) => {
-        AppModule.saveMessage(route.params.e164, message)
+        try {
+            await AppModule.saveMessage(route.params.e164, message)
+        }
+        catch (e) { console.log(e) }
         // try {
         //     if (newConversation) {
         //         const conversationId = await AppModule.createConversation(route.params.e164, message)

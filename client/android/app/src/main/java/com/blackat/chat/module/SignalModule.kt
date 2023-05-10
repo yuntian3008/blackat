@@ -13,7 +13,6 @@ import com.blackat.chat.data.repository.SignalRepository
 import com.blackat.chat.signal.crypto.PreKeyUtil
 import com.blackat.chat.utils.*
 import com.blackat.chat.utils.Base64
-import com.blackatclient.Utils
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
 import org.signal.libsignal.protocol.*
@@ -31,8 +30,6 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    //    private val db = Room.databaseBuilder(context, SignalDatabase::class.java, "SignalDatabase").build()
-//    private val keyValueDao = db.keyValueDao()
     init {
         context.addLifecycleEventListener(this)
     }
@@ -78,7 +75,6 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
 
                     val identityKey = SignalRepository.account().getIdentityKeyPair().publicKey
-
 
                     return@withContext Base64.encodeBytes(identityKey.serialize())
                 }
@@ -668,11 +664,11 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 //    }
 
 
-    @ReactMethod
-    fun generateIdentityKeyPair(promise: Promise) {
-        val identityKeyPair = IdentityKeyPair.generate()
-        promise.resolve(Utils.fromBytes(identityKeyPair.serialize()))
-    }
+//    @ReactMethod
+//    fun generateIdentityKeyPair(promise: Promise) {
+//        val identityKeyPair = IdentityKeyPair.generate()
+//        promise.resolve(Utils.fromBytes(identityKeyPair.serialize()))
+//    }
 
     private fun getCurrentCountryCode(): String {
         val tm = reactApplicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager

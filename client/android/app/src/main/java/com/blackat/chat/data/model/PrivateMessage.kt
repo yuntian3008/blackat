@@ -5,12 +5,16 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+enum class MessageState {
+    SENT,SENDING,RECEIVED
+}
 data class Message(
         val owner: String,
         val data: String,
         val type: Int,
         val timestamp: String,
 ) {
+    var state: MessageState? = null
     companion object {
         const val TEXT_TYPE = 0
         const val IMAGE_TYPE = 1

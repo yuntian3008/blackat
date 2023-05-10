@@ -3,6 +3,8 @@ package com.blackat.chat.module
 import android.util.Log
 import androidx.lifecycle.Observer
 import com.blackat.chat.data.database.AppDatabase
+import com.blackat.chat.data.model.Message
+import com.blackat.chat.data.model.MessageState
 import com.blackat.chat.data.model.PrivateConversationWithMessages
 import com.blackat.chat.data.repository.AppRepository
 import com.blackat.chat.utils.ReadableMapUtils
@@ -143,7 +145,8 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
 
                     val conversation = AppRepository.privateConversation().get(e164)
                     val msg = ReadableMapUtils.getMessage(message)
-
+                    if (msg.owner == Message.SELF)
+                        msg.state = MessageState.SENDING
                     conversation?.let {
                         AppRepository.privateMessage().save(msg,it.id!!)
                     } ?: AppRepository.privateConversation().create(e164,msg)
@@ -158,25 +161,28 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
         }
     }
 
-    @ReactMethod
-    fun saveMessage(conversationId: Int, message: ReadableMap) {
-        scope.launch {
-            try {
-                withContext(context = Dispatchers.IO) {
-                    if (reactApplicationContext == null)
-                        throw Exception("context null")
-
-
-                    return@withContext AppRepository.privateMessage().save(
-                            ReadableMapUtils.getMessage(message),
-                            conversationId
-                    )
-                }
-
-            } catch (_: Exception) {
-            }
-        }
-    }
+//    @ReactMethod
+//    fun saveMessage(conversationId: Int, message: ReadableMap) {
+//        scope.launch {
+//            try {
+//                withContext(context = Dispatchers.IO) {
+//                    if (reactApplicationContext == null)
+//                        throw Exception("context null")
+//
+//                    val newMessage = ReadableMapUtils.getMessage(message)
+//                    if (newMessage.owner == Message.SELF)
+//                        newMessage.state = MessageState.SENDING
+//
+//                    return@withContext AppRepository.privateMessage().save(
+//                        newMessage,
+//                        conversationId
+//                    )
+//                }
+//
+//            } catch (_: Exception) {
+//            }
+//        }
+//    }
 
     fun isExistedConversation(e164: String, promise: Promise) {
         scope.launch {

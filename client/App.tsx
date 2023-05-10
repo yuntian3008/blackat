@@ -34,8 +34,8 @@ import Splash from './screens/splash';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import VerifyOtpCode from './screens/login/verify';
 import { createStackNavigator } from '@react-navigation/stack';
-import { adaptNavigationTheme } from 'react-native-paper';
-import { darkTheme, lightTheme } from './theme';
+import { Text, adaptNavigationTheme, useTheme } from 'react-native-paper';
+import { AppTheme, darkTheme, lightTheme } from './theme';
 import Search from './screens/search';
 import Header, { HeaderItems, MenuItems } from './components/Header';
 import NewContact from './screens/newcontact';
@@ -52,6 +52,10 @@ import AppModule from './native/android/AppModule';
 import { format, formatISO } from 'date-fns';
 import Log from './utils/Log';
 import ImageView from './screens/imageview';
+import { connected, disconnected } from './redux/SocketConnection';
+import { TopToast } from './components/TopToast';
+import { showTopToast } from './redux/TopToast';
+import { useNetInfo } from '@react-native-community/netinfo';
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -87,6 +91,8 @@ const emitUploadIdentityKey = (identityKey: Signal.Types.IdentityKey) => {
   })
 }
 
+
+
 const emitUploadSignedPreKey = (signedPreKey: Signal.Types.SignedPreKey) => {
   return new Promise<boolean>((resolve) => {
     socket.emit('uploadSignedPreKey', signedPreKey, function (result) {
@@ -108,9 +114,10 @@ const Stack = createStackNavigator<RootStackParamList>()
 
 function App(): JSX.Element {
   const schema = useColorScheme()
+  const theme = useTheme<AppTheme>()
 
   // Set an initializing state whilst Firebase connects
-  const [isConnected, setIsConnected] = useState(socket.connected);
+  // const [isConnected, setIsConnected] = useState(socket.connected);
   const [authStateInitializing, setAuthStateInitializing] = useState(true);
   const [socketInitializing, setSocketInitializing] = useState(true);
   const [databaseInitializing, setDatabaseInitializing] = useState(true)
@@ -120,6 +127,7 @@ function App(): JSX.Element {
   const [test, setTest] = useState<number>(0)
 
   const conversationData = useAppSelector(state => state.conversationData.value)
+  const socketConnection = useAppSelector(state => state.socketConnection.value)
   const dispatch = useAppDispatch()
 
 
@@ -141,61 +149,83 @@ function App(): JSX.Element {
 
   useEffect(() => {
     const login = async () => {
-      const idToken = await user!.getIdToken()
-      const registrationId = await SignalModule.requireRegistrationId()
+      try {
+        const idToken = await user!.getIdToken()
+        const registrationId = await SignalModule.requireRegistrationId()
 
-      socket.auth = {
-        token: idToken,
-        registrationId: registrationId
+        socket.auth = {
+          token: idToken,
+          registrationId: registrationId
+        }
+        socket.connect()
+      } catch (e) {
+        console.log(e)
       }
-      socket.connect()
+
     }
-    if (user && !isConnected) {
-      ToastAndroid.show('Đã đăng nhập đang kết nối máy chủ', ToastAndroid.SHORT)
+    if (user && !socketConnection) {
+      // ToastAndroid.show('Đã đăng nhập đang kết nối máy chủ', ToastAndroid.SHORT)
       login()
     }
-    if (!user && isConnected) {
+    if (!user && socketConnection) {
       socket.emit('logout')
     }
 
   }, [user])
 
+  const netInfo = useNetInfo()
+  useEffect(() => {
+    if (!netInfo.isConnected) {
+      dispatch(showTopToast({
+        content: "Không có kết nối internet",
+        duration: 10000
+      }))
+    }
+  }, [netInfo.isConnected])
+
   useEffect(() => {
     const handleBundleRequire = async (requirement: BundleRequirement): Promise<boolean> => {
-      let resultIdentityKey = true;
-      let resultSignedPreKey = true;
-      let resultPreKey = true;
-      if (requirement.needIdentityKey) {
-        const identityKey = await SignalModule.requireIdentityKey()
-        resultIdentityKey = await emitUploadIdentityKey(identityKey)
+      try {
+        let resultIdentityKey = true;
+        let resultSignedPreKey = true;
+        let resultPreKey = true;
+        if (requirement.needIdentityKey) {
+          const identityKey = await SignalModule.requireIdentityKey()
+          resultIdentityKey = await emitUploadIdentityKey(identityKey)
+        }
+        if (requirement.needSignedPreKey) {
+          const signedPreKey = await SignalModule.requireSignedPreKey()
+          resultSignedPreKey = await emitUploadSignedPreKey(signedPreKey)
+        }
+        if (requirement.needPreKeys) {
+          const preKeys = await SignalModule.requireOneTimePreKey()
+          resultPreKey = await emitUploadPreKeys(preKeys)
+        }
+        return resultIdentityKey && resultPreKey && resultSignedPreKey
+      } catch (e) {
+        console.log(e)
+        return false
       }
-      if (requirement.needSignedPreKey) {
-        const signedPreKey = await SignalModule.requireSignedPreKey()
-        resultSignedPreKey = await emitUploadSignedPreKey(signedPreKey)
-      }
-      if (requirement.needPreKeys) {
-        const preKeys = await SignalModule.requireOneTimePreKey()
-        resultPreKey = await emitUploadPreKeys(preKeys)
-      }
-      return resultIdentityKey && resultPreKey && resultSignedPreKey
+
     }
 
     function onConnect() {
       console.log('Đã kết nối máy chủ')
-      setIsConnected(true);
+      dispatch(connected)
+      // setIsConnected(true);
     }
 
     function onDisconnect() {
-      setIsConnected(false);
+      dispatch(disconnected)
+      // setIsConnected(false);
     }
 
     function onConnectError(err: Error) {
-      Alert.alert("Lỗi", err.message)
-      switch (err.message) {
-        case "timeout":
-          Alert.alert("Lỗi", "Không thể kết nối với máy chủ")
-          break
-      }
+      dispatch(disconnected)
+      // setIsConnected(false);
+      console.log(err.message)
+      if (err.message === "timeout")
+        dispatch(showTopToast({ content: "Máy chủ không phản hồi" }))
     }
 
     function onLogged(info: LoggedInfo) {
@@ -217,48 +247,50 @@ function App(): JSX.Element {
     }
 
     const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
-      let plainText
-      if (message.fileInfo !== undefined) {
-        console.log("Nhan dc anh dang decrypt")
-        plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, false)
-      }
-      else
-        plainText = await SignalModule.decrypt(sender, message.data, false)
-      if (plainText === null) {
-        Log("GHI FILE THẤT BẠI")
-        ToastAndroid.show('GHI FILE THẤT BẠI', ToastAndroid.SHORT)
-        return
-      }
-      if (typeof plainText !== "string") {
-        const error = (plainText as SignalError)
-        if (error.code == "need-encrypt") {
-          const localAddress = await SignalModule.requireLocalAddress()
-          const emptyCipher = await SignalModule.encrypt(sender, "")
-          const emptyMessage: Server.Message = {
-            data: {
-              cipher: emptyCipher.cipher,
-              type: emptyCipher.type
-            },
-            type: AppTypes.MessageType.EMPTY,
-            timestamp: formatISO(new Date())
-          }
-
-          const result = await outGoingMessage(localAddress, sender, emptyMessage)
-          if (message.fileInfo !== undefined) {
-            plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
-          }
-          else
-            plainText = await SignalModule.decrypt(sender, message.data, true)
-          if (typeof plainText !== "string") throw new Error("cannot-encrypt")
+      try {
+        let plainText
+        if (message.fileInfo !== undefined) {
+          console.log("Nhan dc anh dang decrypt")
+          plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, false)
         }
-      }
-      if (message.type == AppTypes.MessageType.EMPTY) return;
-      await AppModule.saveMessage(sender.e164, {
-        data: plainText as string,
-        owner: AppTypes.MessageOwner.PARTNER,
-        timestamp: message.timestamp,
-        type: message.type
-      })
+        else
+          plainText = await SignalModule.decrypt(sender, message.data, false)
+        if (plainText === null) {
+          Log("GHI FILE THẤT BẠI")
+          ToastAndroid.show('GHI FILE THẤT BẠI', ToastAndroid.SHORT)
+          return
+        }
+        if (typeof plainText !== "string") {
+          const error = (plainText as SignalError)
+          if (error.code == "need-encrypt") {
+            const localAddress = await SignalModule.requireLocalAddress()
+            const emptyCipher = await SignalModule.encrypt(sender, "")
+            const emptyMessage: Server.Message = {
+              data: {
+                cipher: emptyCipher.cipher,
+                type: emptyCipher.type
+              },
+              type: AppTypes.MessageType.EMPTY,
+              timestamp: formatISO(new Date())
+            }
+
+            const result = await outGoingMessage(localAddress, sender, emptyMessage)
+            if (message.fileInfo !== undefined) {
+              plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
+            }
+            else
+              plainText = await SignalModule.decrypt(sender, message.data, true)
+            if (typeof plainText !== "string") throw new Error("cannot-encrypt")
+          }
+        }
+        if (message.type == AppTypes.MessageType.EMPTY) return;
+        await AppModule.saveMessage(sender.e164, {
+          data: plainText as string,
+          owner: AppTypes.MessageOwner.PARTNER,
+          timestamp: message.timestamp,
+          type: message.type
+        })
+      } catch (e) { console.log(e) }
     }
 
     const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
@@ -306,7 +338,6 @@ function App(): JSX.Element {
 
     }
 
-
     console.log("on socket")
     socket.on('requireBundle', onBundleRequire)
     socket.on('logged', onLogged)
@@ -339,9 +370,9 @@ function App(): JSX.Element {
 
 
 
-  const needServer = true
+  // const needServer = true
 
-  if (authStateInitializing || databaseInitializing || splashOpening || (user && !isConnected && needServer)) {
+  if (authStateInitializing || databaseInitializing || splashOpening /*|| (user && !socketConnection && needServer) */) {
     return (<Splash onAnimationFinished={() => setSplashOpening(false)} />);
   }
 
@@ -351,10 +382,10 @@ function App(): JSX.Element {
       <ApplicationProvider {...eva} theme={{ ...eva.light, ...MyBrandTheme }}>
         <SafeAreaProvider>
           {/* <NavigationContainer theme={scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}> */}
-
+          <TopToast />
           <NavigationContainer theme={schema === 'dark' ? DarkTheme : LightTheme}>
             <Stack.Navigator>
-              {(!isConnected && needServer) ? (
+              {(!user) ? (
                 <Stack.Group screenOptions={{ headerShown: false }}>
                   <Stack.Screen name='Introduce' component={Introduce} />
                   <Stack.Screen name='Login' component={Login} />
@@ -375,6 +406,12 @@ function App(): JSX.Element {
                       title: "Blackat",
                       headerRight: () => {
                         const menuItems: MenuItems[] = [
+                          {
+                            label: "test",
+                            onPress: () => {
+                              dispatch(showTopToast({ content: "Không có kết nối" }))
+                            }
+                          },
                           {
                             label: "Dev - clear all tables",
                             onPress: () => {
@@ -426,13 +463,13 @@ function App(): JSX.Element {
                     />
                   </Stack.Group>
                   <Stack.Group screenOptions={{ headerShown: true, presentation: 'modal' }}>
-                    <Stack.Screen name ="ImageView" component={ImageView} options={{
+                    <Stack.Screen name="ImageView" component={ImageView} options={{
                       headerStyle: {
                         backgroundColor: 'black'
                       },
                       headerTintColor: '#f1f1f1',
                       title: 'Hình ảnh'
-                    }}/>
+                    }} />
                   </Stack.Group>
                 </>
 

@@ -24,6 +24,7 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
     const theme = useTheme()
 
     const conversationData = useAppSelector(state => state.conversationData.value)
+    const socketConnection = useAppSelector(state => state.socketConnection.value)
 
     useEffect(() => {
         const ui: Array<ConversationData> = []

@@ -4,6 +4,7 @@ import { Server, Signal, SocketEvent } from "../../shared/types";
 
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://103.161.97.57:3000', {
     autoConnect: false,
+    timeout: 5000,
 })
 
 export default socket

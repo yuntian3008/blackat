@@ -14,7 +14,7 @@ const initialState: ConversationWithMessagesState = {
 }
 
 export const ConversationWithMessagesSlice = createSlice({
-  name: 'counter',
+  name: 'conversationWithMessages',
   // `createSlice` will infer the state type from the `initialState` argument
   initialState,
   reducers: {
