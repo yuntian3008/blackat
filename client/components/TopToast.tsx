@@ -5,7 +5,7 @@ import { Text, useTheme } from "react-native-paper";
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { useDispatch } from "react-redux";
-import { resetTopToast } from "../redux/TopToast";
+import { dequeueTopToast } from "../redux/TopToast";
 import { AppTheme } from "../theme";
 
 export enum TopToastType {
@@ -16,10 +16,9 @@ export enum TopToastType {
 }
 
 export interface TopToastProps {
-    visible: boolean,
     content: string,
-    duration?: number,
-    type: TopToastType | TopToastType.error
+    duration: number,
+    type: TopToastType
     // onTimeout: () => void
 }
 
@@ -28,25 +27,54 @@ export function TopToast() {
     const theme = useTheme<AppTheme>()
     const animatedValue = useSharedValue(0)
 
-    const props = useAppSelector(state => state.topToast.value)
+    const queue = useAppSelector(state => state.topToast)
     const dispatch = useAppDispatch()
-    // const [ visible, setVisible ] = useState(false)
+    // const [ type, setType ] = useState<TopToastType>(TopToastType.info)
+    // const [ content, setContent ] = useState<string>("")
+    const [ currentToast, setCurrentToast] = useState<TopToastProps>({
+        content: "",
+        duration: 3000,
+        type: TopToastType.info
+    })
 
     useEffect(() => {
-        if (props.visible) {
-            handleShowAlert()
+        if (queue.length > 0 && queue[0] !== currentToast) {
+            setCurrentToast(queue[0])
+            // setType(currentToast.type)
+            // setContent(currentToast.content)
+            handleShowAlert(queue[0].duration).then(() => {
+                dispatch(dequeueTopToast())
+            })
         }
-    }, [props.visible])
+        // if (props.visible) {
+        //     handleShowAlert()
+        // }
+        // else {
+        //     animatedValue.value = withTiming(0, { duration: 600 });
+        // }
+    }, [queue])
 
-    const handleShowAlert = () => {
-        animatedValue.value = withTiming(1, { duration: 600 });
-        if (props.duration !== undefined)
+    const handleShowAlert = (duration: number): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            animatedValue.value = withTiming(1, { duration: 600 });
             setTimeout(() => {
                 animatedValue.value = withTiming(0, { duration: 600 });
                 setTimeout(() => {
-                    dispatch(resetTopToast())
+                    resolve()
                 }, 600);
-            }, props.duration);
+            }, duration + 600);
+        });
+        // if (animatedValue.value == 1) {
+        //     animatedValue.value = withTiming(0, { duration: 600 });
+        // }
+        // else {
+        //     animatedValue.value = withTiming(1, { duration: 600 });
+        //     if (props.duration !== undefined)
+        //         setTimeout(() => {
+        //             dispatch(resetTopToast())
+        //         }, props.duration);
+        // }
+
     };
 
     const animatedStyle = useAnimatedStyle(() => {
@@ -58,7 +86,7 @@ export function TopToast() {
 
     let backgroundColor
     let color
-    switch (props.type) {
+    switch (currentToast.type) {
         case TopToastType.info:
             backgroundColor = theme.colors.infoContainer
             color = theme.colors.info
@@ -99,7 +127,7 @@ export function TopToast() {
                 textAlign: 'center',
                 fontWeight: 'bold',
                 color: color
-            }}>{props.content}</Text>
+            }}>{currentToast.content}</Text>
         </Animated.View>
 
     );

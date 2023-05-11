@@ -17,6 +17,7 @@ import { useAppSelector } from "../../hooks";
 import { ImagePickerResponse, launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import BottomSheet, { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from '@gorhom/bottom-sheet';
 import Log from "../../utils/Log";
+import { encryptAndSendMessage, saveMessageToLocal } from "../../utils/Messaging";
 
 
 
@@ -38,11 +39,11 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     const [newConversation, setNewConversation] = useState<boolean>(false)
     const [localAddress, setLocalAddress] = useState<Signal.Types.SignalProtocolAddress>()
 
+    const socketConnection = useAppSelector(state => state.socketConnection.value)
+
     const onChangeMessage = (message: string) => setMessage(message);
-    const showEmojiModal = () => setVisibleEmoji(true);
-    const hideEmojiModal = () => setVisibleEmoji(false);
 
-
+// LOAD LOCAL ADDRESS
     useEffect(() => {
         const initialize = async () => {
             try {
@@ -51,9 +52,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             } catch (e) {
                 console.log(e)
             }
-
-
-
         }
         if (initializing) {
             initialize().then(() => {
@@ -62,6 +60,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     })
 
+//  OBSERVE MESSAGE DATA
     const conversationData = useAppSelector(state => state.conversationData.value)
 
     useEffect(() => {
@@ -111,49 +110,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     }
 
-    const syncSession = async function (e164: string) {
-        const addresses = await getAddresses(e164)
-        const missingSession = await SignalModule.missingSession(addresses)
-        for (let index = 0; index < missingSession.length; index++) {
-            const missing = missingSession[index];
-            const preKeyBundle = await getPreKeyBundle(missing)
-            const perform = await SignalModule.performKeyBundle(e164, preKeyBundle)
-            console.log("performKeyBundle[" + preKeyBundle.deviceId + "]: " + perform)
-            if (!perform) console.log(preKeyBundle)
-        }
-        return addresses
-    }
-
-    const sendMessageToServer = async function (
-        localAddress: Signal.Types.SignalProtocolAddress,
-        e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo) {
-        // console.log("startSendMessageToServer")
-        const addresses = await syncSession(e164)
-
-        for (let index = 0; index < addresses.length; index++) {
-            const address = addresses[index];
-            let cipher
-            if (fileInfo !== undefined) {
-                cipher = await SignalModule.encryptFile(address, message.data)
-            }
-            else {
-                cipher = await SignalModule.encrypt(address, message.data)
-            }
-            const cipherMessage: Server.Message = {
-                data: cipher,
-                type: message.type,
-                timestamp: message.timestamp,
-                fileInfo: fileInfo
-            }
-
-            const result = await outGoingMessage(localAddress, address, cipherMessage)
-            console.log(result)
-            // console.log("sendResult[" + address.deviceId + "]: " + result)
-            if (result.sentAt === SocketEvent.SendAt.FAILED)
-                console.log("GUI TIN NHAN THAT BAI" + address)
-        }
-
-    }
+    
 
     const addMessage = (message: App.Types.MessageData) => {
         const ui = convertUI(message)
@@ -163,48 +120,42 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         ])
     }
 
-
-    const saveMessageToLocal = async (message: App.Types.MessageData) => {
+    const canSending = async (messageData: App.Types.MessageData, fileInfo?: Server.FileInfo) => {
         try {
-            await AppModule.saveMessage(route.params.e164, message)
-        }
-        catch (e) { console.log(e) }
-        // try {
-        //     if (newConversation) {
-        //         const conversationId = await AppModule.createConversation(route.params.e164, message)
-        //         const loadMessage = await AppModule.loadMessage(route.params.e164)
-        //         loadConversationWithMessages(loadMessage)
-        //         console.log("new conversation: " + conversationId)
-        //         setNewConversation(false)
-        //     } else {
-        //         AppModule.saveMessage(conversation!.id, message)
-        //     }
-        // } catch (e) {
-        //     console.log(e)
-        // }
+            let messageState = App.MessageState.SENDING
+            if (socketConnection) {
+                const result = await encryptAndSendMessage(localAddress!, route.params.e164, messageData, fileInfo)
+                if (result)
+                    messageState = App.MessageState.SENT
+            }
+            await saveMessageToLocal(route.params.e164,messageData,messageState)
+        } catch (e) {
 
+        } 
+        
     }
 
-    const handleSubmit = async (msg: string, type: number) => {
+    const handleText = async (msg: string) => {
         setConversationState(ConversationState.sending)
         const messageData: App.Types.MessageData = {
             data: msg,
             owner: App.MessageOwner.SELF,
             timestamp: formatISO(new Date()),
-            type: type
+            type: App.MessageType.TEXT
         }
         addMessage(messageData)
-        await sendMessageToServer(localAddress!, route.params.e164, messageData)
-        await saveMessageToLocal(messageData)
+        await canSending(messageData)
+        // await encryptAndSendMessage(localAddress!, route.params.e164, messageData)
+        // await saveMessageToLocal(messageData)
 
         setConversationState(ConversationState.sent)
     }
 
-    const submit = () => {
+    const submitTextMessage = () => {
         if (message.length == 0) ToastAndroid.show("Không thể gửi tin nhắn trống", ToastAndroid.SHORT)
         const msg = message
         setMessage('')
-        handleSubmit(msg, App.MessageType.TEXT)
+        handleText(msg)
 
     }
 
@@ -236,8 +187,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 }
                 addMessage(messageData)
                 console.log("dang gui den server")
-                await sendMessageToServer(localAddress!, route.params.e164, messageData, fileInfo)
-                await saveMessageToLocal(messageData)
+                await canSending(messageData, fileInfo)
 
                 setConversationState(ConversationState.sent)
             }
@@ -374,7 +324,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                         }}
                         right={(message.length > 0)
                             ?
-                            <TextInput.Icon onPress={submit} icon={'send'} color={() => theme.colors.primary} />
+                            <TextInput.Icon onPress={submitTextMessage} icon={'send'} color={() => theme.colors.primary} />
                             :
                             <TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'paperclip'} color={() => theme.colors.primary} />
                             // <TextInput.Icon onPress={handleCamera} icon={'camera'} color={() => theme.colors.primary} />

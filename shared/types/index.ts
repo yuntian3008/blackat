@@ -64,6 +64,12 @@ export namespace App {
         export const SELF = "SELF"
         export const PARTNER = "PARTNER"
     }
+    export namespace MessageState {
+        export const SENT = "SENT"
+        export const SENDING = "SENDING"
+        export const RECEIVED = "RECEIVED"
+        export const UNKNOWN = "UNKNOWN"
+    }
     export namespace Types {
         export type Conversation = {
             id: number,
@@ -79,6 +85,11 @@ export namespace App {
             id: number,
             conversationId: number
             message: MessageData
+        }
+        export type MessageWithE164 = {
+            message: MessageData,
+            fileInfo? : Server.FileInfo
+            e164: string
         }
         export type ConversationWithMessages = {
             messages: Array<Message>

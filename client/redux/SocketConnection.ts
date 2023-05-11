@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { ConnectionState } from "realm"
 
 interface SocketConnectionState {
     value: boolean

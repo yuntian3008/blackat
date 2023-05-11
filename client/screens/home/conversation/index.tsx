@@ -12,8 +12,10 @@ import { LoadingOverlay } from "../../../components/Utils";
 import { useEffect, useState } from "react";
 import AppModule from "../../../native/android/AppModule";
 import EmptyItem from "../../../components/EmptyItem";
-import { useAppSelector } from "../../../hooks";
+import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { App } from "../../../../shared/types";
+import { enqueueTopToast } from "../../../redux/TopToast";
+import { TopToastType } from "../../../components/TopToast";
 
 
 
@@ -25,6 +27,7 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
 
     const conversationData = useAppSelector(state => state.conversationData.value)
     const socketConnection = useAppSelector(state => state.socketConnection.value)
+    const dispatch = useAppDispatch()
 
     useEffect(() => {
         const ui: Array<ConversationData> = []
@@ -40,7 +43,7 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
                     case App.MessageType.IMAGE:
                         contentLastMessage = lastMessage.owner == App.MessageOwner.SELF ? "Bạn đã gửi ảnh" : "[Hình ảnh]"
                         break;
-                
+
                     default:
                         contentLastMessage = "[Tin nhắn]"
                         break;
@@ -229,7 +232,16 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
 
                 </ScrollView>
                 <FAB
-                    onPress={() => navigation.getParent()?.navigate('NewContact')}
+                    onPress={() => {
+                        if (!socketConnection)
+                            dispatch(enqueueTopToast({
+                                content: 'Máy chủ bị gián đoạn',
+                                duration: 3000,
+                                type: TopToastType.error
+                            }))
+                        navigation.getParent()?.navigate('NewContact')
+                    }
+                    }
                     icon="message-plus"
                     variant={'primary'}
                     size="medium"

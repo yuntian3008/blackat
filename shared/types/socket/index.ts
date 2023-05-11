@@ -10,6 +10,8 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
+    online: () => void,
+    checkMailbox: (callback: (messages: Array<Server.Mail>) => void) => void,
     isSomeOneThere: (phoneNumber: string, callback: (result: boolean) => void) => void,
     uploadIdentityKey: (identityKey: Signal.Types.IdentityKey, callback: (result: boolean) => void) => void
     uploadSignedPreKey: (signedPreKey: Signal.Types.SignedPreKey, callback: (result: boolean) => void) => void

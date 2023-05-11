@@ -134,22 +134,81 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
             }
         }
     }
+    @ReactMethod
+    fun getSendingMessages(promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val conversation = AppRepository.privateMessage().test()
+
+                    val array = Arguments.createArray()
+
+                    conversation.forEach() {
+                        val record = Arguments.createMap()
+                        record.putMap("message",WritableMapUtils.getMessage(it.message))
+                        it.message.fileInfo?.let { fileInfo ->
+                            record.putMap("fileInfo",WritableMapUtils.getFileInfo(fileInfo))
+                        }
+                        record.putString("e164",it.e164)
+                        array.pushMap(record)
+                        Log.d("testBlackat", "${it.e164} - ${it.message.data} - ${it.message.state}")
+                    }
+
+                    return@withContext array;
+                }
+                promise.resolve(result)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("testError",e.stackTraceToString())
+            }
+        }
+    }
+
+    private suspend fun saveMessageNative(e164: String, message: ReadableMap, messageState: String, fileInfoMap: ReadableMap?) {
+        val conversation = AppRepository.privateConversation().get(e164)
+        val msg = ReadableMapUtils.getMessage(message)
+        msg.state = MessageState.valueOf(messageState)
+        fileInfoMap?.let {
+            msg.fileInfo = ReadableMapUtils.getFileInfo(it)
+        }
+        conversation?.let {
+            AppRepository.privateMessage().save(msg,it.id!!)
+        } ?: AppRepository.privateConversation().create(e164,msg)
+    }
 
     @ReactMethod
-    fun saveMessage(e164: String, message: ReadableMap, promise: Promise) {
+    fun saveMessage(e164: String, message: ReadableMap, messageState: String, fileInfoMap: ReadableMap, promise: Promise) {
         scope.launch {
             try {
                 withContext(context = Dispatchers.IO) {
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    val conversation = AppRepository.privateConversation().get(e164)
-                    val msg = ReadableMapUtils.getMessage(message)
-                    if (msg.owner == Message.SELF)
-                        msg.state = MessageState.SENDING
-                    conversation?.let {
-                        AppRepository.privateMessage().save(msg,it.id!!)
-                    } ?: AppRepository.privateConversation().create(e164,msg)
+                    saveMessageNative(e164,message,messageState,fileInfoMap)
+
+
+                    return@withContext;
+                }
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun saveMessage(e164: String, message: ReadableMap, messageState: String, promise: Promise) {
+
+        scope.launch {
+            try {
+                withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    saveMessageNative(e164,message,messageState,null)
 
 
                     return@withContext;

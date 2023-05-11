@@ -2,6 +2,7 @@ package com.blackat.chat.data.converter
 
 import androidx.room.TypeConverter
 import com.blackat.chat.data.model.IdentityKey
+import com.blackat.chat.data.model.MessageState
 import com.blackat.chat.utils.Base64
 import org.signal.libsignal.protocol.ecc.Curve
 import org.signal.libsignal.protocol.ecc.ECPrivateKey
@@ -9,6 +10,10 @@ import org.signal.libsignal.protocol.ecc.ECPublicKey
 import org.signal.libsignal.protocol.state.SessionRecord
 
 class Converters {
+    @TypeConverter
+    fun toMessageState(value: String) = enumValueOf<MessageState>(value)
+    @TypeConverter
+    fun fromMessageState(value: MessageState) = value.name
     @TypeConverter
     fun fromByteArray(bytes: ByteArray): String = Base64.encodeBytes(bytes)
     @TypeConverter

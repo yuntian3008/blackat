@@ -1,5 +1,6 @@
 package com.blackat.chat.signal.storage
 
+import com.blackat.chat.data.dao.MessageWithE164
 import com.blackat.chat.data.dao.OneTimePreKeyDao
 import com.blackat.chat.data.dao.PrivateConversationDao
 import com.blackat.chat.data.dao.PrivateMessageDao
@@ -14,5 +15,9 @@ class PrivateMessageStore(
 ) {
     suspend fun save(message: Message, conversationId: Int) {
         store.insert(PrivateMessage(message,conversationId))
+    }
+
+    suspend fun test(): List<MessageWithE164> {
+        return store.getMessagesWithState(MessageState.SENDING)
     }
 }

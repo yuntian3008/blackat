@@ -53,9 +53,10 @@ import { format, formatISO } from 'date-fns';
 import Log from './utils/Log';
 import ImageView from './screens/imageview';
 import { connected, disconnected } from './redux/SocketConnection';
-import { TopToast } from './components/TopToast';
-import { showTopToast } from './redux/TopToast';
+import { TopToast, TopToastType } from './components/TopToast';
+import { enqueueTopToast } from './redux/TopToast';
 import { useNetInfo } from '@react-native-community/netinfo';
+import { inComingMessage, onBundleRequire, onMailBox } from './utils/Messaging';
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -83,31 +84,7 @@ export type RootStackParamList = {
   }
 };
 
-const emitUploadIdentityKey = (identityKey: Signal.Types.IdentityKey) => {
-  return new Promise<boolean>((resolve) => {
-    socket.emit('uploadIdentityKey', identityKey, function (result) {
-      resolve(result)
-    })
-  })
-}
 
-
-
-const emitUploadSignedPreKey = (signedPreKey: Signal.Types.SignedPreKey) => {
-  return new Promise<boolean>((resolve) => {
-    socket.emit('uploadSignedPreKey', signedPreKey, function (result) {
-      resolve(result)
-    })
-  })
-}
-
-const emitUploadPreKeys = (preKeys: Array<Signal.Types.PreKey>) => {
-  return new Promise<boolean>((resolve) => {
-    socket.emit('uploadPreKeys', preKeys, function (result) {
-      resolve(result)
-    })
-  })
-}
 
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -130,14 +107,11 @@ function App(): JSX.Element {
   const socketConnection = useAppSelector(state => state.socketConnection.value)
   const dispatch = useAppDispatch()
 
-
+  // FLOW DATABASE CHANGED
   useEffect(() => {
     const conversationWithMessageChanged = (data: Array<AppTypes.Types.ConversationWithMessages>) => {
       dispatch(setConversationData(data))
       setDatabaseInitializing(false)
-      // console.log("Đã flow dữ liệu database")
-      // console.log(data)
-      // console.log(conversationData)
     }
     const eventEmiter = new NativeEventEmitter(NativeModules.AppModule)
     const eventListener = eventEmiter.addListener('conversationWithMessageChanged', conversationWithMessageChanged)
@@ -147,6 +121,7 @@ function App(): JSX.Element {
     }
   })
 
+  // FLOW AUTHENTICATION STATE
   useEffect(() => {
     const login = async () => {
       try {
@@ -174,168 +149,47 @@ function App(): JSX.Element {
   }, [user])
 
   const netInfo = useNetInfo()
+  const [justOffline, setJustOffline] = useState<boolean>(false)
+
+  // FLOW INTERNET STATE
   useEffect(() => {
-    if (!netInfo.isConnected) {
-      dispatch(showTopToast({
-        content: "Không có kết nối internet",
-        duration: 10000
+    console.log(netInfo.isConnected)
+    if (netInfo.isConnected === false) {
+      setJustOffline(true)
+      dispatch(enqueueTopToast({
+        content: "Bạn đang ngoại tuyến",
+        duration: 10000,
+        type: TopToastType.error
       }))
     }
-  }, [netInfo.isConnected])
-
-  useEffect(() => {
-    const handleBundleRequire = async (requirement: BundleRequirement): Promise<boolean> => {
-      try {
-        let resultIdentityKey = true;
-        let resultSignedPreKey = true;
-        let resultPreKey = true;
-        if (requirement.needIdentityKey) {
-          const identityKey = await SignalModule.requireIdentityKey()
-          resultIdentityKey = await emitUploadIdentityKey(identityKey)
-        }
-        if (requirement.needSignedPreKey) {
-          const signedPreKey = await SignalModule.requireSignedPreKey()
-          resultSignedPreKey = await emitUploadSignedPreKey(signedPreKey)
-        }
-        if (requirement.needPreKeys) {
-          const preKeys = await SignalModule.requireOneTimePreKey()
-          resultPreKey = await emitUploadPreKeys(preKeys)
-        }
-        return resultIdentityKey && resultPreKey && resultSignedPreKey
-      } catch (e) {
-        console.log(e)
-        return false
-      }
-
+    if (justOffline && netInfo.isConnected) {
+      setJustOffline(false)
+      dispatch(enqueueTopToast({
+        content: "Bạn đã trực tuyến trở lại",
+        duration: 3000,
+        type: TopToastType.success
+      }))
     }
 
+  }, [netInfo.isConnected])
+
+  // SOCKET LISTENER
+  useEffect(() => {
     function onConnect() {
       console.log('Đã kết nối máy chủ')
-      dispatch(connected)
-      // setIsConnected(true);
+      dispatch(connected())
     }
 
     function onDisconnect() {
-      dispatch(disconnected)
-      // setIsConnected(false);
+      dispatch(disconnected())
     }
 
     function onConnectError(err: Error) {
-      dispatch(disconnected)
-      // setIsConnected(false);
-      console.log(err.message)
-      if (err.message === "timeout")
-        dispatch(showTopToast({ content: "Máy chủ không phản hồi" }))
+      dispatch(disconnected())
     }
 
     function onLogged(info: LoggedInfo) {
       SignalModule.logged(info.e164, info.deviceId)
-    }
-
-
-    function onBundleRequire(requirement: BundleRequirement) {
-      if (requirement.needIdentityKey || requirement.needPreKeys || requirement.needSignedPreKey)
-        ToastAndroid.show("Máy chủ thiếu một só khóa và yêu cầu cung cấp khóa chúng", ToastAndroid.SHORT)
-      handleBundleRequire(requirement).then((v) => {
-
-        if (!v) {
-          ToastAndroid.show("Cung cấp khóa cho máy chủ không thành công", ToastAndroid.SHORT)
-          BackHandler.exitApp()
-        }
-        else ToastAndroid.show("Cung cấp khóa cho máy chủ thành công", ToastAndroid.SHORT)
-      })
-    }
-
-    const saveMessageToLocal = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> => {
-      try {
-        let plainText
-        if (message.fileInfo !== undefined) {
-          console.log("Nhan dc anh dang decrypt")
-          plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, false)
-        }
-        else
-          plainText = await SignalModule.decrypt(sender, message.data, false)
-        if (plainText === null) {
-          Log("GHI FILE THẤT BẠI")
-          ToastAndroid.show('GHI FILE THẤT BẠI', ToastAndroid.SHORT)
-          return
-        }
-        if (typeof plainText !== "string") {
-          const error = (plainText as SignalError)
-          if (error.code == "need-encrypt") {
-            const localAddress = await SignalModule.requireLocalAddress()
-            const emptyCipher = await SignalModule.encrypt(sender, "")
-            const emptyMessage: Server.Message = {
-              data: {
-                cipher: emptyCipher.cipher,
-                type: emptyCipher.type
-              },
-              type: AppTypes.MessageType.EMPTY,
-              timestamp: formatISO(new Date())
-            }
-
-            const result = await outGoingMessage(localAddress, sender, emptyMessage)
-            if (message.fileInfo !== undefined) {
-              plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
-            }
-            else
-              plainText = await SignalModule.decrypt(sender, message.data, true)
-            if (typeof plainText !== "string") throw new Error("cannot-encrypt")
-          }
-        }
-        if (message.type == AppTypes.MessageType.EMPTY) return;
-        await AppModule.saveMessage(sender.e164, {
-          data: plainText as string,
-          owner: AppTypes.MessageOwner.PARTNER,
-          timestamp: message.timestamp,
-          type: message.type
-        })
-      } catch (e) { console.log(e) }
-    }
-
-    const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
-      Log(`Có tin nhắn mới từ ${sender.e164}`)
-      Log(message)
-      saveMessageToLocal(sender, message).then(() => {
-        callback({
-          isProcessed: true
-        })
-      }).catch((e) => {
-        console.log("Bắt đc nè")
-        console.log(e)
-        callback({
-          isProcessed: false
-        })
-      })
-    }
-
-    const findErrorMails = async (messages: Array<Server.Mail>): Promise<Array<Server.Mail>> => {
-      var errorMessage: Array<Server.Mail> = []
-      console.log("Có " + messages.length + " mail cần check")
-      for (let message of messages) {
-        try {
-          console.log("Đang check " + message.sender.e164)
-          await saveMessageToLocal(message.sender, message.message)
-          AppModule.ting(message.sender.e164)
-        } catch (e) {
-          errorMessage.push(message)
-        }
-      }
-      return errorMessage
-    }
-
-    const onMailBox = (messages: Array<Server.Mail>, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
-      findErrorMails(messages).then((errors) => {
-        console.log("Đã check mail với " + errors.length + " mail bị lỗi")
-        callback({
-          isProcessed: true
-        })
-        if (errors.length > 0) {
-          console.log("Các mail xử lí thất bại")
-          console.log(errors)
-        }
-      })
-
     }
 
     console.log("on socket")
@@ -370,7 +224,6 @@ function App(): JSX.Element {
 
 
 
-  // const needServer = true
 
   if (authStateInitializing || databaseInitializing || splashOpening /*|| (user && !socketConnection && needServer) */) {
     return (<Splash onAnimationFinished={() => setSplashOpening(false)} />);
@@ -409,7 +262,7 @@ function App(): JSX.Element {
                           {
                             label: "test",
                             onPress: () => {
-                              dispatch(showTopToast({ content: "Không có kết nối" }))
+                              AppModule.test()
                             }
                           },
                           {

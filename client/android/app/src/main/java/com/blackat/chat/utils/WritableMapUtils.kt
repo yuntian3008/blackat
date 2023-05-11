@@ -1,5 +1,7 @@
 package com.blackat.chat.utils
 
+import com.blackat.chat.data.model.FileInfo
+import com.blackat.chat.data.model.Message
 import com.blackat.chat.data.model.PrivateConversation
 import com.blackat.chat.data.model.PrivateConversationWithMessages
 import com.blackat.chat.data.model.PrivateMessage
@@ -11,11 +13,6 @@ data class CipherMessage(
         public val cipher: String
 )
 
-data class FileInfo(
-        val fileName: String,
-        val fileType: String,
-        val fileSize: Int,
-)
 
 class WritableMapUtils {
     companion object {
@@ -64,6 +61,23 @@ class WritableMapUtils {
             val writableMap = WritableNativeMap()
             writableMap.putString("e164", address.name)
             writableMap.putInt("deviceId", address.deviceId)
+            return writableMap
+        }
+
+        fun getMessage(map: Message): WritableMap {
+            val writableMap = Arguments.createMap()
+            writableMap.putString("owner",map.owner)
+            writableMap.putString("data",map.data)
+            writableMap.putString("timestamp",map.timestamp)
+            writableMap.putInt("type", map.type)
+            return writableMap
+        }
+
+        fun getFileInfo(map: FileInfo): WritableMap {
+            val writableMap = Arguments.createMap()
+            writableMap.putString("name",map.fileName)
+            writableMap.putString("type",map.fileType)
+            writableMap.putInt("size",map.fileSize)
             return writableMap
         }
     }

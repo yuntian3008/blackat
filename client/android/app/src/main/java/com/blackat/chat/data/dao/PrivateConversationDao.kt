@@ -12,6 +12,11 @@ interface PrivateConversationDao {
     @Query("SELECT * FROM private_conversation")
     fun getAllWithMessages(): Flow<List<PrivateConversationWithMessages>>
 
+    @Transaction
+    @Query("SELECT * FROM private_conversation, private_message " +
+            "WHERE private_conversation.id = private_message.privateConversationId")
+    fun getSendingStateWithMessages(): Flow<List<PrivateConversationWithMessages>>
+
     @Query("SELECT * FROM private_conversation")
     suspend fun getAll(): List<PrivateConversation>
 

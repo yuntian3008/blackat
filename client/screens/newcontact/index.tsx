@@ -1,4 +1,4 @@
-import { NativeModules, SafeAreaView, View, ToastAndroid} from "react-native";
+import { NativeModules, SafeAreaView, View, ToastAndroid } from "react-native";
 import { Avatar, List, Searchbar, Text, TextInput } from "react-native-paper";
 import { NewContactProps } from "..";
 import { useEffect, useState } from "react";
@@ -6,7 +6,9 @@ import { isValidPhoneNumber, parsePhoneNumber, CountryCode } from "libphonenumbe
 import SignalModule from "../../native/android/SignalModule";
 import socket from "../../utils/socket";
 import AppModule from "../../native/android/AppModule";
-import { useAppSelector } from "../../hooks";
+import { useAppDispatch, useAppSelector } from "../../hooks";
+import { enqueueTopToast } from "../../redux/TopToast";
+import { TopToastType } from "../../components/TopToast";
 
 const { CURRENT_COUNTRY_CODE } = SignalModule.getConstants();
 
@@ -21,18 +23,24 @@ export default function NewContact({ navigation }: NewContactProps): JSX.Element
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
 
+    const socketConnection = useAppSelector(state => state.socketConnection.value)
+    const dispatch = useAppDispatch()
+
     const createConversation = async (searchResult: SearchResult) => {
         if (socketConnection) {
             navigation.navigate('ChatZone', {
                 e164: searchResult.phoneNumber
             })
         } else {
-            ToastAndroid.show("Không có kết nối", ToastAndroid.SHORT)
+            dispatch(enqueueTopToast({
+                content: 'Máy chủ bị gián đoạn',
+                duration: 3000,
+                type: TopToastType.error
+            }))
         }
 
     }
 
-    const socketConnection = useAppSelector(state => state.socketConnection.value)
 
     useEffect(() => {
         // console.log(CURRENT_COUNTRY_CODE)

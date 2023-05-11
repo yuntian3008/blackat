@@ -551,7 +551,6 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     @ReactMethod
     fun checkIntegrityOfSignedPreKey(map: ReadableMap, promise: Promise) {
         scope.launch {

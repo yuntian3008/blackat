@@ -1,6 +1,7 @@
 package com.blackat.chat.utils
 
 import com.blackat.chat.data.model.Address
+import com.blackat.chat.data.model.FileInfo
 import com.blackat.chat.data.model.Message
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
