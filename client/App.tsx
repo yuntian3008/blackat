@@ -56,7 +56,7 @@ import { connected, disconnected } from './redux/SocketConnection';
 import { TopToast, TopToastType } from './components/TopToast';
 import { enqueueTopToast } from './redux/TopToast';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { inComingMessage, onBundleRequire, onMailBox } from './utils/Messaging';
+import { inComingMessage, onBundleRequire, prepareMessaging } from './utils/Messaging';
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -178,6 +178,12 @@ function App(): JSX.Element {
     function onConnect() {
       console.log('Đã kết nối máy chủ')
       dispatch(connected())
+      prepareMessaging().then(() => {
+        socket.emit('online')
+      }).catch((e) => {
+        Log("PREPARE MESSESIGN ISSUE")
+        Log(e)
+      })
     }
 
     function onDisconnect() {
@@ -199,7 +205,7 @@ function App(): JSX.Element {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('inComingMessage', inComingMessage)
-    socket.on("sendMailbox", onMailBox)
+    // socket.on("sendMailbox", onMailBox)
 
     return () => {
       console.log("off socket")
@@ -209,7 +215,7 @@ function App(): JSX.Element {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('inComingMessage', inComingMessage)
-      socket.off("sendMailbox", onMailBox)
+      // socket.off("sendMailbox", onMailBox)
 
     };
   }, []);

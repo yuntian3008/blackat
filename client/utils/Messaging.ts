@@ -16,14 +16,15 @@ const emitCheckMailBox = () => {
     })
 }
 
-const connected = async () => {
+export const prepareMessaging = async () => {
     const mailbox = await emitCheckMailBox()
     await mailboxHandler(mailbox)
     const sendingMessage = await AppModule.getSendingMessages();
     const localAddress = await SignalModule.requireLocalAddress()
-    sendingMessage.forEach((v) => {
-        encryptAndSendMessage(localAddress, v.e164, v.message, v.fileInfo)
-    })
+    for (let i = 0; i < sendingMessage.length; i++) {
+        const v = sendingMessage[i];
+        await encryptAndSendMessage(localAddress, v.e164, v.message, v.fileInfo)
+    }
 }
 
 // ===================== SIGNAL PROTOCOL

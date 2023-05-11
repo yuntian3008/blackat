@@ -128,7 +128,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 if (result)
                     messageState = App.MessageState.SENT
             }
-            await saveMessageToLocal(route.params.e164,messageData,messageState)
+            await saveMessageToLocal(route.params.e164,messageData,messageState,fileInfo)
         } catch (e) {
 
         } 

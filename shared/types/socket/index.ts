@@ -6,7 +6,7 @@ export interface ServerToClientEvents {
     logged: (info: LoggedInfo) => void,
     sessionInfo: (sessionInfo: SessionInfo) => void
     inComingMessage: (sender: Signal.Types.SignalProtocolAddress, message: Server.Message , callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
-    sendMailbox:  (messages: Array<Server.Mail> , callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
+    // sendMailbox:  (messages: Array<Server.Mail> , callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
 }
 
 export interface ClientToServerEvents {
