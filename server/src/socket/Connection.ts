@@ -139,7 +139,7 @@ export default function Connection(socket: ServerSocket) {
     })
 
     const outGoingMessageV2 = async (sender: Signal.Types.SignalProtocolAddress, messages: Map<Signal.Types.SignalProtocolAddress, Server.Message>) => {
-        console.log("Tin nhắn đi (v2)")
+        console.log(`Tin nhắn đi (v2)[length:${messages.size}]`)
         try {
             for (let address of messages.keys()) {
                 console.log(`[${sender.e164},${sender.deviceId}] => [${address.e164},${address.deviceId}]`)

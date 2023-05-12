@@ -33,7 +33,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
 
 
     const [conversation, setConversation] = useState<App.Types.Conversation>()
-    const [messages, setMessages] = useState<Array<App.Types.Message>>([])
+
 
     const [initializing, setInitializing] = useState<boolean>(true)
     const [newConversation, setNewConversation] = useState<boolean>(false)
