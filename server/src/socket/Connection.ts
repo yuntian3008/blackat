@@ -6,6 +6,9 @@ import User from "../db/model/User";
 import Key from "../db/model/Key";
 import { clients } from "../server";
 import Mailbox from "../db/model/Mailbox";
+import { sendNotificationMessage } from "../firebase/messaging";
+
+
 
 const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> =>
     new Promise((resolve, reject) => {
@@ -28,7 +31,7 @@ const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Sign
 
 const onlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> =>
     new Promise((resolve, reject) => {
-        clients.get(address.e164).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
+        clients.get(JSON.stringify(address)).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
             if (err) {
                 offlineHandle(sender, address, message).then(() => {
                     resolve({
@@ -57,8 +60,12 @@ export default function Connection(socket: ServerSocket) {
     console.log(socket.data.logged.e164 + " bắt đầu quá trình check mail")
 
     socket.on('online', () => {
-        clients.set(socket.data.phoneNumber, socket)
+        clients.set(JSON.stringify({
+            e164: socket.data.logged.e164,
+            deviceId: socket.data.logged.deviceId
+        }), socket)
         console.log(socket.data.logged.e164 + " vào trạng thái online")
+        console.log(clients.keys())
     })
 
     socket.on('checkMailbox', (callback) => {
@@ -143,8 +150,8 @@ export default function Connection(socket: ServerSocket) {
         try {
             for (let pack of messages) {
                 console.log(`[${sender.e164},${sender.deviceId}] => [${pack.address.e164},${pack.address.deviceId}]`)
-                // let message = messages.get(address)
-                if (clients.has(pack.address.e164)) {
+                
+                if (clients.has(JSON.stringify(pack.address))) {
                     console.log(`[ONLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
                     // console.log('[]' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
                     const result = await onlineHandle(sender,pack.address,pack.message)
@@ -152,12 +159,43 @@ export default function Connection(socket: ServerSocket) {
                     console.log(`[OFFLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
                     await offlineHandle(sender, pack.address, pack.message)
                 }
+                sendNotification(sender, pack)
             }
             return true
         }
         catch (err) {
+            console.log(`That bai`)
+            console.log(err)
             return false
         }
+        
+    }
+
+    const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, message: Server.MessagePackage) => {
+        const deviceId = await Device.getId(message.address.e164, message.address.deviceId)
+        const device = await Device.findById(deviceId)
+
+        const receiverPackage: Server.MessagePackage = {
+            address: sender,
+            message: message.message
+        }
+
+        if (device.fcmToken) {
+            sendNotificationMessage([device.fcmToken],{
+                message: JSON.stringify(receiverPackage),
+                // android: {
+                //     channelId: 'messages',
+                //     sound: 'inComing',
+                //     vibrationPattern: [300,300,300,300],
+                //     actions: [
+                //         {
+                //             title: 'Trả lời'
+                //         }
+                //     ]
+                // }
+                
+            })
+        }   
         
     }
 
@@ -173,7 +211,7 @@ export default function Connection(socket: ServerSocket) {
     socket.on('outGoingMessage', (sender, address, message, callback) => {
         // console.log([...clients.entries()])
         console.log("Có tin nhắn loại " + message.type)
-        if (clients.has(address.e164)) {
+        if (clients.has(JSON.stringify(address))) {
             console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
             onlineHandle(sender,address,message).then((v) => {
                 callback(v)

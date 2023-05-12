@@ -12,26 +12,29 @@ import SignalModule from './native/android/SignalModule';
 import { Provider } from 'react-redux';
 import store from './store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import messaging from '@react-native-firebase/messaging';
+import { onMessageReceived } from './utils/Fcm';
 
 
 export default function Main() {
     // SignalModule.testBasicPreKeyV3()
     SignalModule.onFirstEverAppLaunch()
-    .then((v) => {
-        console.log(v ? "Đã khởi tạo lần đầu thành công": "Khởi tạo lần đầu thất bại")
-    }).catch((e) => {
-        console.log(e)
-    })
+        .then((v) => {
+            console.log(v ? "Đã khởi tạo lần đầu thành công" : "Khởi tạo lần đầu thất bại")
+        }).catch((e) => {
+            console.log(e)
+        })
+    messaging().setBackgroundMessageHandler(onMessageReceived)
     const colorScheme = useColorScheme()
     return (
         <Provider store={store}>
             <PaperProvider theme={colorScheme === 'dark' ? darkTheme : lightTheme}>
-                <GestureHandlerRootView  style={{ flex: 1 }}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
                     <App />
                 </GestureHandlerRootView>
             </PaperProvider>
         </Provider>
-        
+
     );
 }
 

@@ -177,6 +177,7 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
 
                     AppRepository.privateMessage().markAsSent(id)
 
+
                     return@withContext;
                 }
                 promise.resolve(true)

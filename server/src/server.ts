@@ -1,4 +1,3 @@
-import * as Signal  from "@signalapp/libsignal-client";
 import * as express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -9,6 +8,7 @@ import { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketDa
 import AuthMiddleware from "./socket/middleware/AuthMiddleware";
 import test, { testMode } from "./test";
 import { ServerSocket } from "socket";
+import { Signal } from "../../shared/types";
 
 const app = express();
 const httpServer = createServer(app);
@@ -24,15 +24,18 @@ const io = new Server<
 io.use(AuthMiddleware)
 
 export const clients: Map<string, ServerSocket> = new Map()
-export const addClient = (e164: string, client: ServerSocket) => {
-  clients.set(e164,client)
+export const addClient = (address: Signal.Types.SignalProtocolAddress, client: ServerSocket) => {
+  clients.set(JSON.stringify(address),client)
 }
 
 io.on("connection", (socket) => {
   Connection(socket)
   // console.log(clients.keys.toString())
   socket.on("disconnect", (reason) => {
-    clients.delete(socket.data.phoneNumber)
+    clients.delete(JSON.stringify({
+      e164: socket.data.logged.e164,
+      deviceId: socket.data.logged.deviceId
+    }))
     console.log(socket.data.phoneNumber + ' disconnected (' + reason + ')')
 });
 });

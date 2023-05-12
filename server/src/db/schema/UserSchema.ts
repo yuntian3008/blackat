@@ -19,6 +19,7 @@ export interface UserModel extends Model<IUser> {
     findKeyWithoutDevice(phoneNumber: string): Promise<Types.ObjectId>
     // readyToStart(phoneNumber: string): Promise<boolean>
     getAddresses(phoneNumber: string): Promise<Array<Signal.Types.SignalProtocolAddress>>
+    getTokens(phoneNumber: string): Promise<Array<string>>
 }
 
 export type LoginResult = {
@@ -165,6 +166,20 @@ UserSchema.static('getAddresses',async function getAddresses(phoneNumber: string
             e164: phoneNumber,
             deviceId: device.deviceId
         })
+    }
+    return result
+})
+
+UserSchema.static('getTokens',async function getTokens(phoneNumber: string): Promise<Array<string>> {
+    const result: Array<string> = []
+    const user = await this.findOne({phoneNumber: phoneNumber}).populate('devices')
+    if(user === null) return result
+
+    for (let index = 0; index < user.devices.length; index++) {
+        const deviceId = user.devices[index];
+        const device = await Device.findById(deviceId)
+        if (device.fcmToken)
+            result.push(device.fcmToken)
     }
     return result
 })
