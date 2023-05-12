@@ -7,26 +7,48 @@ import Key from "../db/model/Key";
 import { clients } from "../server";
 import Mailbox from "../db/model/Mailbox";
 
-const offlineHandle = (sender: Signal.Types.SignalProtocolAddress , address: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (outGoingMessageResult: SocketEvent.OutGoingMessageResult) => void) => {
-    console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang ngoại tuyến [CIPHERTYPE: ' + message.data.type + ']')
-            Device.getId(address.e164, address.deviceId)
-                .then((device) => {
-                    Mailbox.add(device._id, {
-                        sender: sender,
-                        message: message
-                    }).then((mailbox) => {
-                        if (mailbox) callback({
-                            sentAt: SocketEvent.SendAt.MAILBOX
-                        })
-                    }).catch((err) => {
-                        console.log(err)
-                        callback({ sentAt: SocketEvent.SendAt.FAILED })
-                    })
+const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> =>
+    new Promise((resolve, reject) => {
+        Device.getId(address.e164, address.deviceId)
+            .then((device) => {
+                Mailbox.add(device._id, {
+                    sender: sender,
+                    message: message
+                }).then((mailbox) => {
+                    if (mailbox) resolve()
                 }).catch((err) => {
                     console.log(err)
-                    callback({ sentAt: SocketEvent.SendAt.FAILED })
+                    reject(err)
                 })
-}
+            }).catch((err) => {
+                console.log(err)
+                reject(err)
+            })
+    })
+
+const onlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> =>
+    new Promise((resolve, reject) => {
+        clients.get(address.e164).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
+            if (err) {
+                offlineHandle(sender, address, message).then(() => {
+                    resolve({
+                        sentAt: SocketEvent.SendAt.MAILBOX
+                    })
+                }).catch((e) => {
+                    reject(e)
+                })
+            } else {
+                if(inComingMessageResult.isProcessed) {
+                    resolve({
+                        sentAt: SocketEvent.SendAt.DEVICE
+                    })
+                }
+                reject(new Error("Receiver failed to process"))
+                
+            }
+
+        })
+    })
 
 export default function Connection(socket: ServerSocket) {
 
@@ -35,14 +57,14 @@ export default function Connection(socket: ServerSocket) {
     console.log(socket.data.logged.e164 + " bắt đầu quá trình check mail")
 
     socket.on('online', () => {
-        clients.set(socket.data.phoneNumber,socket)
+        clients.set(socket.data.phoneNumber, socket)
         console.log(socket.data.logged.e164 + " vào trạng thái online")
     })
 
     socket.on('checkMailbox', (callback) => {
         Mailbox.getAll(socket.data.deviceObjectId).then((v) => {
             callback(v)
-            if(v.length > 0) {
+            if (v.length > 0) {
                 Mailbox.clearAll(socket.data.deviceObjectId)
             }
         }).catch((e) => {
@@ -51,8 +73,8 @@ export default function Connection(socket: ServerSocket) {
         })
     })
 
-    
-    
+
+
 
     socket.on('uploadIdentityKey', (identityKey, callback) => {
         Key.setIdentityKey(socket.data.deviceObjectId, identityKey).then((v) => {
@@ -116,25 +138,52 @@ export default function Connection(socket: ServerSocket) {
         })
     })
 
-    
+    const outGoingMessageV2 = async (sender: Signal.Types.SignalProtocolAddress, messages: Map<Signal.Types.SignalProtocolAddress, Server.Message>) => {
+        console.log("Tin nhắn đi (v2)")
+        try {
+            for (let address of messages.keys()) {
+                console.log(`[${sender.e164},${sender.deviceId}] => [${address.e164},${address.deviceId}]`)
+                let message = messages.get(address)
+                if (clients.has(address.e164)) {
+                    console.log(`[ONLINE][TYPE:${message.type}][CIPHER:${message.data.type}]`)
+                    // console.log('[]' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
+                    const result = await onlineHandle(sender,address,message)
+                } else {
+                    console.log(`[OFFLINE][TYPE:${message.type}][CIPHER:${message.data.type}]`)
+                    await offlineHandle(sender, address, message)
+                }
+            }
+            return true
+        }
+        catch (err) {
+            return false
+        }
+        
+    }
+
+    socket.on('outGoingMessageV2', (sender, messages, callback) => {
+        outGoingMessageV2(sender,messages).then((success) => {
+            callback(success)
+        })
+    })
 
     socket.on('outGoingMessage', (sender, address, message, callback) => {
-        console.log([...clients.entries()])
+        // console.log([...clients.entries()])
         console.log("Có tin nhắn loại " + message.type)
         if (clients.has(address.e164)) {
             console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
             clients.get(address.e164).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
                 if (err) {
-                    offlineHandle(sender,address,message,callback)
-                }else {
+                    offlineHandle(sender, address, message, callback)
+                } else {
                     callback({
                         sentAt: inComingMessageResult.isProcessed ? SocketEvent.SendAt.DEVICE : SocketEvent.SendAt.FAILED
                     })
                 }
-                
+
             })
         } else {
-            offlineHandle(sender,address,message,callback)
+            offlineHandle(sender, address, message, callback)
         }
     })
 

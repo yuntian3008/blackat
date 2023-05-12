@@ -43,7 +43,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
 
     const onChangeMessage = (message: string) => setMessage(message);
 
-// LOAD LOCAL ADDRESS
+    // LOAD LOCAL ADDRESS
     useEffect(() => {
         const initialize = async () => {
             try {
@@ -60,7 +60,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     })
 
-//  OBSERVE MESSAGE DATA
+    //  OBSERVE MESSAGE DATA
     const conversationData = useAppSelector(state => state.conversationData.value)
 
     useEffect(() => {
@@ -71,6 +71,19 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             // console.log(v)
         })
         setBubbles(ui)
+        const state = thisConversation?.state
+        switch (state) {
+            case App.MessageState.SENDING:
+                setConversationState(ConversationState.sending)
+                break;
+            case App.MessageState.SENT:
+                setConversationState(ConversationState.sent)
+                break;
+
+            default:
+                setConversationState(ConversationState.unknown)
+                break;
+        }
     }, [conversationData])
 
 
@@ -110,7 +123,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     }
 
-    
+
 
     const addMessage = (message: App.Types.MessageData) => {
         const ui = convertUI(message)
@@ -123,20 +136,21 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     const canSending = async (messageData: App.Types.MessageData, fileInfo?: Server.FileInfo) => {
         try {
             let messageState = App.MessageState.SENDING
+            setConversationState(ConversationState.sending)
             if (socketConnection) {
                 const result = await encryptAndSendMessage(localAddress!, route.params.e164, messageData, fileInfo)
                 if (result)
                     messageState = App.MessageState.SENT
             }
-            await saveMessageToLocal(route.params.e164,messageData,messageState,fileInfo)
+            await saveMessageToLocal(route.params.e164, messageData, messageState, fileInfo)
         } catch (e) {
 
-        } 
-        
+        }
+
     }
 
     const handleText = async (msg: string) => {
-        setConversationState(ConversationState.sending)
+        
         const messageData: App.Types.MessageData = {
             data: msg,
             owner: App.MessageOwner.SELF,
@@ -147,8 +161,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         await canSending(messageData)
         // await encryptAndSendMessage(localAddress!, route.params.e164, messageData)
         // await saveMessageToLocal(messageData)
-
-        setConversationState(ConversationState.sent)
     }
 
     const submitTextMessage = () => {
@@ -178,7 +190,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                     size: asset.fileSize,
                 }
 
-                setConversationState(ConversationState.sending)
                 const messageData: App.Types.MessageData = {
                     data: asset.uri,
                     owner: App.MessageOwner.SELF,
@@ -188,8 +199,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 addMessage(messageData)
                 console.log("dang gui den server")
                 await canSending(messageData, fileInfo)
-
-                setConversationState(ConversationState.sent)
             }
             else {
                 console.log("Pick Image Failed")
@@ -305,7 +314,7 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                         visible={visible}
                         onDismiss={closeMenu}
                         anchorPosition="top"
-                        anchor={<IconButton size={28} style={{ }} mode="contained" onPress={openMenu} icon={'camera-image'} />}>
+                        anchor={<IconButton size={28} style={{}} mode="contained" onPress={openMenu} icon={'camera-image'} />}>
                         <Menu.Item onPress={openCamera} leadingIcon={'camera'} title="Máy ảnh" />
                         <Menu.Item onPress={openImagePicker} leadingIcon={'image'} title="Thư viện" />
                     </Menu>

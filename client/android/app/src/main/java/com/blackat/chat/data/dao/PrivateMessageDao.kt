@@ -18,6 +18,9 @@ interface PrivateMessageDao {
     @Query("DELETE FROM private_message")
     suspend fun deleteAll()
 
+    @Query("UPDATE private_message SET state = :messageState WHERE id = :id")
+    suspend fun changeState(messageState: MessageState, id: Int)
+
     @Query(
             "SELECT private_message.*, private_conversation.e164 " +
                     "FROM private_conversation, private_message " +
@@ -30,5 +33,7 @@ interface PrivateMessageDao {
 data class MessageWithE164(
         @Embedded
         val message: Message,
+        val id: Int,
         val e164: String,
+
 )

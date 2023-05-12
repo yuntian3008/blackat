@@ -48,11 +48,14 @@ class WritableMapUtils {
         fun getPrivateConversationWithMessages(privateConversationWithMessages: PrivateConversationWithMessages): WritableMap {
             val privateMessageArray = WritableNativeArray()
 
+            val last = privateConversationWithMessages.messages.last()
+
             privateConversationWithMessages.messages.forEach() {
                 privateMessageArray.pushMap(getPrivateMessage(it))
             }
             val writableMap = WritableNativeMap()
             writableMap.putArray("messages", privateMessageArray)
+            writableMap.putString("state",last.message.state.name)
             writableMap.putMap("conversation", getPrivateConversation(privateConversationWithMessages.conversation))
             return  writableMap
         }

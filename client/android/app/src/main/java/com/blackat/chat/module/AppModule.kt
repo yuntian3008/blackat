@@ -3,7 +3,6 @@ package com.blackat.chat.module
 import android.util.Log
 import androidx.lifecycle.Observer
 import com.blackat.chat.data.database.AppDatabase
-import com.blackat.chat.data.model.Message
 import com.blackat.chat.data.model.MessageState
 import com.blackat.chat.data.model.PrivateConversationWithMessages
 import com.blackat.chat.data.repository.AppRepository
@@ -142,12 +141,13 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    val conversation = AppRepository.privateMessage().test()
+                    val conversation = AppRepository.privateMessage().getMessageWithE164List()
 
                     val array = Arguments.createArray()
 
                     conversation.forEach() {
                         val record = Arguments.createMap()
+                        record.putInt("id",it.id)
                         record.putMap("message",WritableMapUtils.getMessage(it.message))
                         it.message.fileInfo?.let { fileInfo ->
                             record.putMap("fileInfo",WritableMapUtils.getFileInfo(fileInfo))
@@ -158,6 +158,26 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
                     }
 
                     return@withContext array;
+                }
+                promise.resolve(result)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("testError",e.stackTraceToString())
+            }
+        }
+    }
+
+    @ReactMethod
+    fun markAsSent(id: Int, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.privateMessage().markAsSent(id)
+
+                    return@withContext;
                 }
                 promise.resolve(result)
             } catch (e: Exception) {
@@ -180,7 +200,7 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
     }
 
     @ReactMethod
-    fun saveMessage(e164: String, message: ReadableMap, messageState: String, fileInfoMap: ReadableMap, promise: Promise) {
+    fun saveFileMessage(e164: String, message: ReadableMap, messageState: String, fileInfoMap: ReadableMap, promise: Promise) {
         scope.launch {
             try {
                 withContext(context = Dispatchers.IO) {

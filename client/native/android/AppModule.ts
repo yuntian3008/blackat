@@ -17,10 +17,11 @@ interface AppModuleInterface {
     loadMessage(e164: string): Promise<App.Types.ConversationWithMessages>
     // saveMessage(conversationId: number, message: App.Types.MessageData): void
     saveMessage(e164: string, message: App.Types.MessageData, state: string): Promise<boolean>
-    saveMessage(e164: string, message: App.Types.MessageData, state: string, fileInfo: Server.FileInfo): Promise<boolean>
+    saveFileMessage(e164: string, message: App.Types.MessageData, state: string, fileInfo: Server.FileInfo): Promise<boolean>
     ting(e164: string): Promise<boolean>
     createConversation(e164: string, firstMessage: App.Types.MessageData): Promise<number>
     getSendingMessages(): Promise<Array<App.Types.MessageWithE164>>
+    markAsSent(id: number): Promise<void>
 }
 
 export default AppModule as AppModuleInterface

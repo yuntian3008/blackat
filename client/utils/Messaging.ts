@@ -23,7 +23,8 @@ export const prepareMessaging = async () => {
     const localAddress = await SignalModule.requireLocalAddress()
     for (let i = 0; i < sendingMessage.length; i++) {
         const v = sendingMessage[i];
-        await encryptAndSendMessage(localAddress, v.e164, v.message, v.fileInfo)
+        const send = await encryptAndSendMessage(localAddress, v.e164, v.message, v.fileInfo)
+        if (send) AppModule.markAsSent(v.id)
     }
 }
 
@@ -124,11 +125,29 @@ const syncSession = async function (e164: string) {
 export const outGoingMessage = async (
     sender: Signal.Types.SignalProtocolAddress,
     address: Signal.Types.SignalProtocolAddress,
-    message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => {
+    message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => { 
+        if (socket.connected)
         socket.emit('outGoingMessage', sender, address, message, (v) => {
             resolve(v)
         })
+        else {
+            resolve({
+                sentAt: SocketEvent.SendAt.FAILED
+            })
+        }
+            
     })
+
+export const outGoingMessageV2 = async (
+        sender: Signal.Types.SignalProtocolAddress, messages: Map<Signal.Types.SignalProtocolAddress, Server.Message>): Promise<boolean> => new Promise((resolve) => { 
+            if (socket.connected)
+                socket.emit('outGoingMessageV2', sender, messages, (v) => {
+                    resolve(v)
+                })
+            else {
+                resolve(false)
+            }
+        })
 
 export const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
     Log(`Có tin nhắn mới từ ${sender.e164}`)
@@ -152,7 +171,7 @@ export const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, mess
 export const saveMessageToLocal = async (e164: string, message: App.Types.MessageData, state: string, fileInfo?: Server.FileInfo) => {
     try {
         if (fileInfo !== undefined)
-            await AppModule.saveMessage(e164, message, state, fileInfo)
+            await AppModule.saveFileMessage(e164, message, state, fileInfo)
         else
             await AppModule.saveMessage(e164, message, state)
     }
@@ -218,7 +237,7 @@ export const encryptAndSendMessage = async function (
     e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo): Promise<boolean> {
     // console.log("startSendMessageToServer")
     const addresses = await syncSession(e164)
-    let result = false
+    let messages = new Map<Signal.Types.SignalProtocolAddress, Server.Message>()
     for (let index = 0; index < addresses.length; index++) {
         const address = addresses[index];
         let cipher
@@ -234,15 +253,16 @@ export const encryptAndSendMessage = async function (
             timestamp: message.timestamp,
             fileInfo: fileInfo
         }
-
-        const outGoingMessageResult = await outGoingMessage(localAddress, address, cipherMessage)
-        console.log(outGoingMessageResult)
-        // console.log("sendResult[" + address.deviceId + "]: " + result)
-        if (outGoingMessageResult.sentAt !== SocketEvent.SendAt.FAILED) {
-            result = true
-        }
+        messages.set(address,cipherMessage)
+        // const outGoingMessageResult = await outGoingMessage(localAddress, address, cipherMessage)
+        // console.log(outGoingMessageResult)
+        // // console.log("sendResult[" + address.deviceId + "]: " + result)
+        // if (outGoingMessageResult.sentAt !== SocketEvent.SendAt.FAILED) {
+        //     result = true
+        // }
     }
-    return result
+    const send = await outGoingMessageV2(localAddress,messages)
+    return send
 
 }
 

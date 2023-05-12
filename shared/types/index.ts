@@ -87,12 +87,14 @@ export namespace App {
             message: MessageData
         }
         export type MessageWithE164 = {
+            id: number,
             message: MessageData,
             fileInfo? : Server.FileInfo
             e164: string
         }
         export type ConversationWithMessages = {
             messages: Array<Message>
+            state: string,
             conversation: Conversation
         }
     }
