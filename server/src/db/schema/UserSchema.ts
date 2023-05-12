@@ -15,7 +15,7 @@ export interface IUser {
 
 export interface UserModel extends Model<IUser> {
     // updateState(info: LoggedInfo, connected: boolean): Promise<boolean>
-    login(phoneNumber: string, registrationId: number): Promise<LoginResult>;
+    login(phoneNumber: string, registrationId: number, fcmToken: string): Promise<LoginResult>;
     findKeyWithoutDevice(phoneNumber: string): Promise<Types.ObjectId>
     // readyToStart(phoneNumber: string): Promise<boolean>
     getAddresses(phoneNumber: string): Promise<Array<Signal.Types.SignalProtocolAddress>>
@@ -39,7 +39,7 @@ const UserSchema = new Schema<IUser, UserModel>({
     // }
 })
 
-UserSchema.static('login',async function login(e164: string, registrationId: number): Promise<LoginResult> {
+UserSchema.static('login',async function login(e164: string, registrationId: number, fcmToken: string): Promise<LoginResult> {
 
     let result: LoginResult = {
         success: false,
@@ -75,7 +75,8 @@ UserSchema.static('login',async function login(e164: string, registrationId: num
 
             const newDevice = await new Device({
                 user: user._id,
-                registrationId: registrationId
+                registrationId: registrationId,
+                fcmToken: fcmToken
             }).save()
             
             const newKey = await new Key({

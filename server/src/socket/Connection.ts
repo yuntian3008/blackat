@@ -138,19 +138,19 @@ export default function Connection(socket: ServerSocket) {
         })
     })
 
-    const outGoingMessageV2 = async (sender: Signal.Types.SignalProtocolAddress, messages: Map<Signal.Types.SignalProtocolAddress, Server.Message>) => {
-        console.log(`Tin nhắn đi (v2)[length:${messages.size}]`)
+    const outGoingMessageV2 = async (sender: Signal.Types.SignalProtocolAddress, messages: Array<Server.MessagePackage>) => {
+        console.log(`Tin nhắn đi (v2)[length:${messages.length}]`)
         try {
-            for (let address of messages.keys()) {
-                console.log(`[${sender.e164},${sender.deviceId}] => [${address.e164},${address.deviceId}]`)
-                let message = messages.get(address)
-                if (clients.has(address.e164)) {
-                    console.log(`[ONLINE][TYPE:${message.type}][CIPHER:${message.data.type}]`)
+            for (let pack of messages) {
+                console.log(`[${sender.e164},${sender.deviceId}] => [${pack.address.e164},${pack.address.deviceId}]`)
+                // let message = messages.get(address)
+                if (clients.has(pack.address.e164)) {
+                    console.log(`[ONLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
                     // console.log('[]' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
-                    const result = await onlineHandle(sender,address,message)
+                    const result = await onlineHandle(sender,pack.address,pack.message)
                 } else {
-                    console.log(`[OFFLINE][TYPE:${message.type}][CIPHER:${message.data.type}]`)
-                    await offlineHandle(sender, address, message)
+                    console.log(`[OFFLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
+                    await offlineHandle(sender, pack.address, pack.message)
                 }
             }
             return true
@@ -162,6 +162,9 @@ export default function Connection(socket: ServerSocket) {
     }
 
     socket.on('outGoingMessageV2', (sender, messages, callback) => {
+        // console.log(sender)
+        // console.log(messages.size)
+        // const map = new Map<Signal.Types.SignalProtocolAddress, Server.Message>(JSON.parse(messages))
         outGoingMessageV2(sender,messages).then((success) => {
             callback(success)
         })

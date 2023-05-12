@@ -20,7 +20,7 @@ export interface ClientToServerEvents {
     getPreKeyBundle: (address: Signal.Types.SignalProtocolAddress, callback: (preKeyBundle: Signal.Types.PreKeyBundle) => void) => void,
     logout: () => void
     outGoingMessage: (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (outGoingMessageResult: SocketEvent.OutGoingMessageResult) => void) => void
-    outGoingMessageV2: (sender: Signal.Types.SignalProtocolAddress, map: Map<Signal.Types.SignalProtocolAddress, Server.Message>, callback: (success: boolean) => void) => void
+    outGoingMessageV2: (sender: Signal.Types.SignalProtocolAddress, mails: Array<Server.MessagePackage>, callback: (success: boolean) => void) => void
     getAddresses: (e164: string, callback: (addresses: Array<Signal.Types.SignalProtocolAddress>) => void) => void
 }
 

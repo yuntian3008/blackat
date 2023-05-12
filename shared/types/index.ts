@@ -120,6 +120,10 @@ export namespace Server {
         sender: Signal.Types.SignalProtocolAddress,
         message: Message
     }
+    export type MessagePackage = {
+        address: Signal.Types.SignalProtocolAddress,
+        message: Message
+    }
 }
 
 export interface SignalError {

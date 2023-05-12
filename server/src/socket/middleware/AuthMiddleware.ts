@@ -9,7 +9,8 @@ import Device from "../../db/model/Device";
 const handle = async (socket: ServerSocket): Promise<void> => {
     const idToken = socket.handshake.auth.token
     const registrationId = socket.handshake.auth.registrationId
-    if (!idToken || !registrationId) {
+    const fcmToken = socket.handshake.auth.fcmToken
+    if (!idToken || !registrationId || !fcmToken) {
         throw new Error("not valid login")
     }
     try {
@@ -19,7 +20,7 @@ const handle = async (socket: ServerSocket): Promise<void> => {
         socket.data.phoneNumber = phoneNumber
         socket.data.device = registrationId
 
-        const loginResult = await User.login(phoneNumber, registrationId)
+        const loginResult = await User.login(phoneNumber, registrationId, fcmToken)
         if (loginResult.success == true) {
             socket.data.logged = loginResult.info
             const device_id = await Device.getId(loginResult.info.e164, loginResult.info.deviceId)

@@ -57,6 +57,9 @@ import { TopToast, TopToastType } from './components/TopToast';
 import { enqueueTopToast } from './redux/TopToast';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { inComingMessage, onBundleRequire, prepareMessaging } from './utils/Messaging';
+import messaging from '@react-native-firebase/messaging'
+
+
 
 const { LightTheme, DarkTheme } = adaptNavigationTheme({
   reactNavigationLight: LightNavigationTheme,
@@ -128,9 +131,13 @@ function App(): JSX.Element {
         const idToken = await user!.getIdToken()
         const registrationId = await SignalModule.requireRegistrationId()
 
+        await messaging().registerDeviceForRemoteMessages()
+        const fcmToken = await messaging().getToken()
+
         socket.auth = {
           token: idToken,
-          registrationId: registrationId
+          registrationId: registrationId,
+          fcmToken: fcmToken
         }
         socket.connect()
       } catch (e) {

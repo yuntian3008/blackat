@@ -179,7 +179,7 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
 
                     return@withContext;
                 }
-                promise.resolve(result)
+                promise.resolve(true)
             } catch (e: Exception) {
                 promise.reject(e)
                 Log.e("testError",e.stackTraceToString())

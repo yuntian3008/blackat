@@ -4,7 +4,7 @@ import SignalModule from "../native/android/SignalModule";
 import Log from "./Log";
 import socket from "./socket";
 import AppModule from "../native/android/AppModule";
-import { BackHandler } from "react-native";
+import { Alert, BackHandler } from "react-native";
 
 // ===================== ONLINE HANDLE
 
@@ -139,7 +139,7 @@ export const outGoingMessage = async (
     })
 
 export const outGoingMessageV2 = async (
-        sender: Signal.Types.SignalProtocolAddress, messages: Map<Signal.Types.SignalProtocolAddress, Server.Message>): Promise<boolean> => new Promise((resolve) => { 
+        sender: Signal.Types.SignalProtocolAddress, messages: Array<Server.MessagePackage>): Promise<boolean> => new Promise((resolve) => { 
             if (socket.connected)
                 socket.emit('outGoingMessageV2', sender, messages, (v) => {
                     resolve(v)
@@ -237,7 +237,7 @@ export const encryptAndSendMessage = async function (
     e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo): Promise<boolean> {
     // console.log("startSendMessageToServer")
     const addresses = await syncSession(e164)
-    let messages = new Map<Signal.Types.SignalProtocolAddress, Server.Message>()
+    let messages : Array<Server.MessagePackage> = []
     for (let index = 0; index < addresses.length; index++) {
         const address = addresses[index];
         let cipher
@@ -253,7 +253,10 @@ export const encryptAndSendMessage = async function (
             timestamp: message.timestamp,
             fileInfo: fileInfo
         }
-        messages.set(address,cipherMessage)
+        messages.push({
+            address: address,
+            message: cipherMessage
+        })
         // const outGoingMessageResult = await outGoingMessage(localAddress, address, cipherMessage)
         // console.log(outGoingMessageResult)
         // // console.log("sendResult[" + address.deviceId + "]: " + result)
@@ -261,6 +264,7 @@ export const encryptAndSendMessage = async function (
         //     result = true
         // }
     }
+    // Alert.alert(messages.size + "")
     const send = await outGoingMessageV2(localAddress,messages)
     return send
 

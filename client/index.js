@@ -14,7 +14,6 @@ import store from './store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 
-
 export default function Main() {
     // SignalModule.testBasicPreKeyV3()
     SignalModule.onFirstEverAppLaunch()

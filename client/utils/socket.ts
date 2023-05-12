@@ -2,7 +2,12 @@ import { Socket, io } from "socket.io-client";
 import { ServerToClientEvents, ClientToServerEvents } from '../../shared/types/socket'
 import { Server, Signal, SocketEvent } from "../../shared/types";
 
-const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://103.161.97.57:3000', {
+// const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://103.161.97.57:3000', {
+//     autoConnect: false,
+//     timeout: 5000,
+// })
+
+const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://192.168.1.69:3000', {
     autoConnect: false,
     timeout: 5000,
 })

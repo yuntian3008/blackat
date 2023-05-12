@@ -21,7 +21,7 @@ interface AppModuleInterface {
     ting(e164: string): Promise<boolean>
     createConversation(e164: string, firstMessage: App.Types.MessageData): Promise<number>
     getSendingMessages(): Promise<Array<App.Types.MessageWithE164>>
-    markAsSent(id: number): Promise<void>
+    markAsSent(id: number): Promise<boolean>
 }
 
 export default AppModule as AppModuleInterface

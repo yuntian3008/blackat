@@ -9,6 +9,7 @@ export interface IDevice {
     user: Types.ObjectId,
     key: Types.ObjectId,
     mailbox: Types.ObjectId,
+    fcmToken?: string,
 }
 
 export interface DeviceModel extends Model<IDevice> {
@@ -33,6 +34,10 @@ const DeviceSchema = new Schema<IDevice, DeviceModel> ({
     mailbox: {
         type: Schema.Types.ObjectId,
         ref: 'Mailbox'
+    },
+    fcmToken: {
+        type: String,
+        default: null,
     }
 })
 DeviceSchema.index({
