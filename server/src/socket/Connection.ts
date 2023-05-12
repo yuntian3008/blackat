@@ -172,18 +172,23 @@ export default function Connection(socket: ServerSocket) {
         console.log("Có tin nhắn loại " + message.type)
         if (clients.has(address.e164)) {
             console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
-            clients.get(address.e164).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
-                if (err) {
-                    offlineHandle(sender, address, message, callback)
-                } else {
-                    callback({
-                        sentAt: inComingMessageResult.isProcessed ? SocketEvent.SendAt.DEVICE : SocketEvent.SendAt.FAILED
-                    })
-                }
-
+            onlineHandle(sender,address,message).then((v) => {
+                callback(v)
+            }).catch(() => {
+                callback({
+                    sentAt: SocketEvent.SendAt.FAILED
+                })
             })
         } else {
-            offlineHandle(sender, address, message, callback)
+            offlineHandle(sender, address, message).then(() => {
+                callback({
+                    sentAt: SocketEvent.SendAt.MAILBOX
+                })
+            }).catch(() => {
+                callback({
+                    sentAt: SocketEvent.SendAt.FAILED
+                })
+            })
         }
     })
 
