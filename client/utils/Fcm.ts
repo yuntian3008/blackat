@@ -1,9 +1,9 @@
 import { FirebaseMessagingTypes } from "@react-native-firebase/messaging";
 import notifee, { AndroidStyle, DisplayedNotification, EventType, Notification } from '@notifee/react-native';
 import { App, Server } from "../../shared/types";
-import { encryptAndSendMessage, receiveAndDecryptMessage } from "./Messaging";
+import { encryptAndSendMessage, receiveAndDecryptMessage, saveMessageToLocal } from "./Messaging";
 import { format, formatDistanceStrict, formatISO, isToday, parseISO } from "date-fns";
-import { vi } from "date-fns/locale";
+import { da, vi } from "date-fns/locale";
 import socket from "./socket";
 import SignalModule from "../native/android/SignalModule";
 
@@ -19,33 +19,33 @@ export const updateChat = async (notification: Notification, input: string) => {
     conversation.push(`<b>Bạn:</b> ${input}`)
 
     const localAddress = await SignalModule.requireLocalAddress()
-    if (socket.connected) {
-        const result = await encryptAndSendMessage(localAddress, e164, {
-            data: input,
-            owner: App.MessageOwner.SELF,
-            timestamp: formatISO(new Date()),
-            type: App.MessageType.TEXT
-        })
-        if (result)
-            notifee.displayNotification({
-                id: notification.id,
-                title: e164,
-                data: {
-                    e164: e164,
-                    conversation: JSON.stringify(conversation)
+
+    socket.connect()
+    const result = await encryptAndSendMessage(localAddress, e164, {
+        data: input,
+        owner: App.MessageOwner.SELF,
+        timestamp: formatISO(new Date()),
+        type: App.MessageType.TEXT
+    })
+    if (result)
+        notifee.displayNotification({
+            id: notification.id,
+            title: e164,
+            data: {
+                e164: e164,
+                conversation: JSON.stringify(conversation)
+            },
+            android: {
+                channelId: 'inComingMessage',
+                style: {
+                    type: AndroidStyle.INBOX,
+                    lines: conversation,
+                    summary: "Đã trả lời",
                 },
-                android: {
-                    channelId: 'inComingMessage',
-                    style: {
-                        type: AndroidStyle.INBOX,
-                        lines: conversation,
-                        summary: "Đã trả lời",
-                    },
-                }
-                // body: plainText.type == App.MessageType.TEXT ?
-                //     `<b>${data.address.e164}:</b> ${plainText.data}` : undefined
-            })
-    }
+            }
+            // body: plainText.type == App.MessageType.TEXT ?
+            //     `<b>${data.address.e164}:</b> ${plainText.data}` : undefined
+        })
 
 }
 
@@ -55,6 +55,7 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
     //     name: "Cuộc trò chuyện",
     //     description: "Thông báo cuộc trò chuyện",
     // })
+    // if (socket.connected) return
 
     notifee.createChannel({
         id: 'inComingMessage',
@@ -75,61 +76,95 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
     })
 
     if (message.data) {
-        const data: Server.MessagePackage = JSON.parse(message.data.message)
+        let data: Server.MessagePackage = JSON.parse(message.data.message)
 
-        const notificationId = data.address.e164.replace('+', '').slice(2)
-
-        const displayed = await notifee.getDisplayedNotifications()
-        const old = displayed.find((d => d.id === notificationId))
-
-        const decrypted = await receiveAndDecryptMessage(data.address, data.message)
-        if (decrypted !== null) {
-
-            let messageDisplay = "đã gửi 1 tin nhắn";
-            if (decrypted.type === App.MessageType.TEXT) messageDisplay = decrypted.data
-            if (decrypted.type === App.MessageType.IMAGE) messageDisplay = "đã gửi 1 ảnh"
-
-            const conversation: Array<string> = [
-                `<b>${data.address.e164}:</b> ${messageDisplay}`
-            ]
-            if (old) {
-                const oldConversation: Array<string> = JSON.parse(old.notification.data!.conversation as string)
-                conversation.unshift(...oldConversation)
+        let decryptedData: App.Types.MessageData
+        if (data.message.type === App.MessageType.TEXT) {
+            try {
+                const decrypted = await receiveAndDecryptMessage(data.address, data.message)
+                if (decrypted === null) return;
+                saveMessageToLocal(data.address.e164, decrypted!, App.MessageState.UNKNOWN)
+                decryptedData = decrypted
+            } catch (e) {
+                console.log('Error -> New text message notification')
+                console.log(e)
+                return
             }
-
-            notifee.displayNotification({
-                id: notificationId,
-                title: data.address.e164,
-                data: {
-                    e164: data.address.e164,
-                    conversation: JSON.stringify(conversation)
-                },
-                android: {
-                    channelId: 'inComingMessage',
-                    vibrationPattern: [300, 300, 300, 300],
-                    sound: 'incoming',
-                    style: {
-                        type: AndroidStyle.INBOX,
-                        lines: conversation,
-                        summary: displaySentAt(decrypted.timestamp),
-                    },
-                    actions: [
-                        {
-                            title: 'Trả lời',
-                            pressAction: {
-                                id: 'reply',
-                            },
-                            input: true,
-                        }
-                    ]
-                }
-                // body: plainText.type == App.MessageType.TEXT ?
-                //     `<b>${data.address.e164}:</b> ${plainText.data}` : undefined
-            })
         }
+        else {
+            decryptedData = {
+                data: "",
+                owner: App.MessageOwner.PARTNER,
+                timestamp: data.message.timestamp,
+                type: data.message.type
+            }
+        }
+        
 
+
+        pushInComingMessageNotification(data.address.e164,decryptedData)
 
 
     }
 
+}
+
+export const pushInComingMessageNotification = async (name: string, data: App.Types.MessageData) => {
+    // DEFINE ID BY E164
+    const notificationId = name.replace('+', '').slice(2) 
+
+    const displayed = await notifee.getDisplayedNotifications()
+    const old = displayed.find((d => d.id === notificationId))
+
+
+    let messageDisplay = "đã gửi 1 tin nhắn";
+    // if (decrypted.type === App.MessageType.TEXT) messageDisplay = decrypted.data
+    if (data.type === App.MessageType.TEXT) {
+        messageDisplay = data.data
+    }
+
+    if (data.type === App.MessageType.IMAGE) messageDisplay = "đã gửi 1 ảnh"
+
+    const conversation: Array<string> = [
+        `${messageDisplay}`
+    ]
+    if (old) {
+        const oldConversation: Array<string> = JSON.parse(old.notification.data!.conversation as string)
+        conversation.unshift(...oldConversation)
+    }
+
+
+    notifee.displayNotification({
+        id: notificationId,
+        title: name,
+        subtitle: 'Blackat',
+        body: messageDisplay,
+        data: {
+            e164: name,
+            conversation: JSON.stringify(conversation)
+        },
+        android: {
+            showTimestamp:true,
+            channelId: 'inComingMessage',
+            vibrationPattern: [300, 300, 300, 300],
+            sound: 'incoming',
+            style: {
+                type: AndroidStyle.INBOX,
+                lines: conversation,
+                summary: displaySentAt(data.timestamp),
+            },
+            pressAction: {
+                id: `blackat://chatzone/${name}`
+            },
+            actions: [
+                {
+                    title: 'Trả lời',
+                    pressAction: {
+                        id: 'reply',
+                    },
+                    input: true,
+                }
+            ]
+        }
+    })
 }

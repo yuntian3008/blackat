@@ -8,13 +8,16 @@
 import {
   DarkTheme as DarkNavigationTheme,
   DefaultTheme as LightNavigationTheme,
+  LinkingOptions,
   NavigationContainer
 } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
   BackHandler,
   DevSettings,
+  Linking,
   LogBox,
   NativeEventEmitter,
   NativeModules,
@@ -58,7 +61,7 @@ import { enqueueTopToast } from './redux/TopToast';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { inComingMessage, onBundleRequire, prepareMessaging } from './utils/Messaging';
 import messaging from '@react-native-firebase/messaging'
-import { Notification } from '@notifee/react-native';
+import notifee, { EventType } from '@notifee/react-native';
 
 
 
@@ -88,7 +91,50 @@ export type RootStackParamList = {
   }
 };
 
+const deepLinksConf = {
+  
+}
 
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['blackat://', 'https://app.blackat.cielot.com'],
+  config: {
+    screens: {
+      ChatZone: 'chatzone/:e164'
+    }
+  },
+  getInitialURL: async () => {
+
+    const url = await Linking.getInitialURL();
+
+    if (url != null) {
+      return url
+    }
+
+    const message = await notifee.getInitialNotification()
+    const link = message?.notification.data?.link as string | undefined
+    return link
+  },
+  subscribe: (listener) => {
+    const onReceiveURL = ({url}: {url: string}) => listener(url);
+
+    // Listen to incoming links from deep linking
+    Linking.addEventListener('url', onReceiveURL);
+
+    const unsubscribeNotification = notifee.onForegroundEvent(({ type, detail}) => {
+      if (type == EventType.PRESS) {
+        const url = detail.pressAction?.id
+
+        if (url)
+          listener(url)
+      }
+    })
+
+    return () => {
+      Linking.removeAllListeners('url')
+      unsubscribeNotification()
+    }
+  }
+}
 
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -110,6 +156,26 @@ function App(): JSX.Element {
   const conversationData = useAppSelector(state => state.conversationData.value)
   const socketConnection = useAppSelector(state => state.socketConnection.value)
   const dispatch = useAppDispatch()
+
+  // const appState = useRef(AppState.currentState);
+  // useEffect(() => {
+  //   const unsubscribe = AppState.addEventListener('change',(state) => {
+  //     if (
+  //       appState.current.match(/inactive|background/) &&
+  //       state == 'active'
+  //     ) {
+  //     }
+  //     else {
+  //       socket.disconnect()
+  //     }
+
+  //     appState.current = state
+  //   })
+
+  //   return () => {
+  //     unsubscribe.remove()
+  //   }
+  // })
 
   // FLOW DATABASE CHANGED
   useEffect(() => {
@@ -250,7 +316,7 @@ function App(): JSX.Element {
         <SafeAreaProvider>
           {/* <NavigationContainer theme={scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}> */}
           <TopToast />
-          <NavigationContainer theme={schema === 'dark' ? DarkTheme : LightTheme}>
+          <NavigationContainer linking={linking} theme={schema === 'dark' ? DarkTheme : LightTheme}>
             <Stack.Navigator>
               {(!user) ? (
                 <Stack.Group screenOptions={{ headerShown: false }}>

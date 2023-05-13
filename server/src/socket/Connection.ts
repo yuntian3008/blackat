@@ -8,7 +8,33 @@ import { clients } from "../server";
 import Mailbox from "../db/model/Mailbox";
 import { sendNotificationMessage } from "../firebase/messaging";
 
+const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, message: Server.MessagePackage) => {
+    const deviceId = await Device.getId(message.address.e164, message.address.deviceId)
+    const device = await Device.findById(deviceId)
 
+    const receiverPackage: Server.MessagePackage = {
+        address: sender,
+        message: message.message
+    }
+
+    if (device.fcmToken) {
+        sendNotificationMessage([device.fcmToken],{
+            message: JSON.stringify(receiverPackage),
+            // android: {
+            //     channelId: 'messages',
+            //     sound: 'inComing',
+            //     vibrationPattern: [300,300,300,300],
+            //     actions: [
+            //         {
+            //             title: 'Trả lời'
+            //         }
+            //     ]
+            // }
+            
+        })
+    }   
+    
+}
 
 const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> =>
     new Promise((resolve, reject) => {
@@ -18,7 +44,13 @@ const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Sign
                     sender: sender,
                     message: message
                 }).then((mailbox) => {
-                    if (mailbox) resolve()
+                    if (mailbox) {
+                        sendNotification(sender, {
+                            address, message
+                        })
+                        resolve()
+                    }
+                    else reject(new Error("Mailbox failed to create a mail")) 
                 }).catch((err) => {
                     console.log(err)
                     reject(err)
@@ -159,7 +191,7 @@ export default function Connection(socket: ServerSocket) {
                     console.log(`[OFFLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
                     await offlineHandle(sender, pack.address, pack.message)
                 }
-                sendNotification(sender, pack)
+                
             }
             return true
         }
@@ -171,33 +203,7 @@ export default function Connection(socket: ServerSocket) {
         
     }
 
-    const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, message: Server.MessagePackage) => {
-        const deviceId = await Device.getId(message.address.e164, message.address.deviceId)
-        const device = await Device.findById(deviceId)
 
-        const receiverPackage: Server.MessagePackage = {
-            address: sender,
-            message: message.message
-        }
-
-        if (device.fcmToken) {
-            sendNotificationMessage([device.fcmToken],{
-                message: JSON.stringify(receiverPackage),
-                // android: {
-                //     channelId: 'messages',
-                //     sound: 'inComing',
-                //     vibrationPattern: [300,300,300,300],
-                //     actions: [
-                //         {
-                //             title: 'Trả lời'
-                //         }
-                //     ]
-                // }
-                
-            })
-        }   
-        
-    }
 
     socket.on('outGoingMessageV2', (sender, messages, callback) => {
         // console.log(sender)

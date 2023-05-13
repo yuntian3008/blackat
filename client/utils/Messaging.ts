@@ -4,7 +4,9 @@ import SignalModule from "../native/android/SignalModule";
 import Log from "./Log";
 import socket from "./socket";
 import AppModule from "../native/android/AppModule";
-import { Alert, BackHandler } from "react-native";
+import { Alert, AppState, BackHandler } from "react-native";
+import notifee from "@notifee/react-native"
+import { pushInComingMessageNotification } from "./Fcm";
 
 // ===================== ONLINE HANDLE
 
@@ -125,36 +127,47 @@ const syncSession = async function (e164: string) {
 export const outGoingMessage = async (
     sender: Signal.Types.SignalProtocolAddress,
     address: Signal.Types.SignalProtocolAddress,
-    message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => { 
+    message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => {
         if (socket.connected)
-        socket.emit('outGoingMessage', sender, address, message, (v) => {
-            resolve(v)
-        })
+            socket.emit('outGoingMessage', sender, address, message, (v) => {
+                resolve(v)
+            })
         else {
             resolve({
                 sentAt: SocketEvent.SendAt.FAILED
             })
         }
-            
+
     })
 
 export const outGoingMessageV2 = async (
-        sender: Signal.Types.SignalProtocolAddress, messages: Array<Server.MessagePackage>): Promise<boolean> => new Promise((resolve) => { 
-            if (socket.connected)
-                socket.emit('outGoingMessageV2', sender, messages, (v) => {
-                    resolve(v)
-                })
-            else {
-                resolve(false)
-            }
-        })
+    sender: Signal.Types.SignalProtocolAddress, messages: Array<Server.MessagePackage>): Promise<boolean> => new Promise((resolve) => {
+        if (socket.connected)
+            socket.emit('outGoingMessageV2', sender, messages, (v) => {
+                resolve(v)
+            })
+        else {
+            resolve(false)
+        }
+    })
 
 export const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
     Log(`Có tin nhắn mới từ ${sender.e164}`)
     Log(message)
+
+
     receiveAndDecryptMessage(sender, message).then((messageData) => {
         if (messageData !== null) {
             saveMessageToLocal(sender.e164, messageData, App.MessageState.UNKNOWN)
+            if (AppState.currentState.match(/inactive|background/)) {
+                pushInComingMessageNotification(
+                    sender.e164, { 
+                        ...messageData,
+                        // Nếu là không phải dạng Text, bỏ bớt data (có thể là file kích thước lớn)
+                        data: messageData.type !== App.MessageType.TEXT ? "" : messageData.data
+                    }
+                )
+            }
         }
         callback({
             isProcessed: true
@@ -166,6 +179,7 @@ export const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, mess
             isProcessed: false
         })
     })
+
 }
 
 export const saveMessageToLocal = async (e164: string, message: App.Types.MessageData, state: string, fileInfo?: Server.FileInfo) => {
@@ -194,6 +208,9 @@ export const receiveAndDecryptMessage = async (sender: Signal.Types.SignalProtoc
         }
         if (typeof plainText !== "string") {
             const error = (plainText as SignalError)
+            if (error.code == "duplicate") {
+                return null;
+            }
             if (error.code == "need-encrypt") {
                 const localAddress = await SignalModule.requireLocalAddress()
                 const emptyCipher = await SignalModule.encrypt(sender, "")
@@ -237,7 +254,7 @@ export const encryptAndSendMessage = async function (
     e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo): Promise<boolean> {
     // console.log("startSendMessageToServer")
     const addresses = await syncSession(e164)
-    let messages : Array<Server.MessagePackage> = []
+    let messages: Array<Server.MessagePackage> = []
     for (let index = 0; index < addresses.length; index++) {
         const address = addresses[index];
         let cipher
@@ -265,7 +282,7 @@ export const encryptAndSendMessage = async function (
         // }
     }
     // Alert.alert(messages.size + "")
-    const send = await outGoingMessageV2(localAddress,messages)
+    const send = await outGoingMessageV2(localAddress, messages)
     return send
 
 }

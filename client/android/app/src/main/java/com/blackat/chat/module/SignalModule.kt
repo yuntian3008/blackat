@@ -345,9 +345,17 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
             return plaintextByteArray
         } catch (e: Exception) {
-            Log.e("DebugV3", e.message ?: "")
             val error = Arguments.createMap()
-            error.putString("code", "need-encrypt")
+            when (e) {
+                is DuplicateMessageException -> {
+                    error.putString("code", "duplicate")
+                }
+                else -> {
+                    error.putString("code", "need-encrypt")
+                }
+            }
+            Log.e("DebugV4", e.stackTraceToString())
+
             return error
         }
     }
@@ -362,7 +370,9 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                     val result = decrypt(address,cipher,forcePreKey)
                     if (result is ByteArray) {
-                        return@withContext String(result)
+                        val plaintext = String(result)
+                        Log.d("DebugV3", "GIẢI MÃ THÀNH CÔNG [${plaintext}]")
+                        return@withContext plaintext
                     }
 
                     return@withContext result
