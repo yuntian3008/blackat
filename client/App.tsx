@@ -122,7 +122,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 
     const unsubscribeNotification = notifee.onForegroundEvent(({ type, detail}) => {
       if (type == EventType.PRESS) {
-        const url = detail.pressAction?.id
+        const url = detail.notification?.data?.link as string | undefined
 
         if (url)
           listener(url)

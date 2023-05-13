@@ -68,13 +68,6 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
         badge: true,
     })
 
-    notifee.onBackgroundEvent(async ({ type, detail }) => {
-        if (type === EventType.ACTION_PRESS && detail.pressAction!.id === 'reply') {
-            await updateChat(detail.notification!, detail.input!);
-            // await notifee.cancelNotification(detail.notification.id);
-        }
-    })
-
     if (message.data) {
         let data: Server.MessagePackage = JSON.parse(message.data.message)
 
@@ -140,6 +133,7 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
         subtitle: 'Blackat',
         body: messageDisplay,
         data: {
+            link: `blackat://chatzone/${name}`,
             e164: name,
             conversation: JSON.stringify(conversation)
         },
@@ -154,7 +148,8 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
                 summary: displaySentAt(data.timestamp),
             },
             pressAction: {
-                id: `blackat://chatzone/${name}`
+                // id: 
+                id: 'default'
             },
             actions: [
                 {

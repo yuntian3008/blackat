@@ -13,7 +13,8 @@ import { Provider } from 'react-redux';
 import store from './store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import messaging from '@react-native-firebase/messaging';
-import { onMessageReceived } from './utils/Fcm';
+import { onMessageReceived, updateChat } from './utils/Fcm';
+import notifee, { EventType } from '@notifee/react-native'
 
 
 export default function Main() {
@@ -25,6 +26,12 @@ export default function Main() {
             console.log(e)
         })
     messaging().setBackgroundMessageHandler(onMessageReceived)
+    notifee.onBackgroundEvent(async ({ type, detail }) => {
+        if (type === EventType.ACTION_PRESS && detail.pressAction.id === 'reply') {
+            await updateChat(detail.notification, detail.input);
+            // await notifee.cancelNotification(detail.notification.id);
+        }
+    })
     const colorScheme = useColorScheme()
     return (
         <Provider store={store}>
