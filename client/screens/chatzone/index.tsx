@@ -84,6 +84,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 setConversationState(ConversationState.unknown)
                 break;
         }
+        if (thisConversation)
+            AppModule.markAllPartnerMessageAsRead(thisConversation.conversation.id)
     }, [conversationData])
 
     const schema = useColorScheme()

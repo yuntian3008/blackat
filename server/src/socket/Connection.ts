@@ -130,7 +130,7 @@ export default function Connection(socket: ServerSocket) {
     })
 
     socket.on('deleteMail', (mailId) => {
-        Mail.remove(new Types.ObjectId(mailId))
+        Mail.rm(new Types.ObjectId(mailId))
     })
 
 
@@ -269,7 +269,6 @@ export default function Connection(socket: ServerSocket) {
     //     const preKeyRecord = Signal.PreKeyRecord.deserialize(preKeyBuffer)
     //     const signedPreKeyRecord = Signal.SignedPreKeyRecord.deserialize(signedPreKeyBuffer)
     //     const identityKeyRecord = Signal.PublicKey.deserialize(identityKeyBuffer)
-
     //     const bundle = Signal.PreKeyBundle.new(
     //         registrationId,
     //         deviceId,

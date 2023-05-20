@@ -7,14 +7,6 @@
 
 const path = require('path');
 
-const MetroConfig = require('@ui-kitten/metro-config');
-
-const evaConfig = {
-  evaPackage: '@eva-design/eva',
-  // Optional, but may be useful when using mapping customization feature.
-  // customMappingPath: './custom-mapping.json',
-};
-
 const extraNodeModules = {
   'shared': path.resolve(__dirname + '/../shared'),
 };
@@ -22,7 +14,7 @@ const watchFolders = [
   path.resolve(__dirname + '/../shared')
 ];
 
-module.exports = MetroConfig.create(evaConfig, {
+module.exports = {
   transformer: {
     getTransformOptions: async () => ({
       transform: {
@@ -39,4 +31,4 @@ module.exports = MetroConfig.create(evaConfig, {
     }),
   },
   watchFolders,
-});
+};

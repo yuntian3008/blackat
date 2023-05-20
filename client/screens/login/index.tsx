@@ -1,27 +1,78 @@
-import { Alert, SafeAreaView, Text, TextInput, View } from "react-native";
+import { Alert, SafeAreaView, Text, View } from "react-native";
 import { LoginProps } from "..";
 import { useEffect, useState } from "react";
-import { IndexPath, Select, SelectItem, Input, Icon, Spinner } from "@ui-kitten/components";
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import { getCountries, getCountryCallingCode, isPossiblePhoneNumber, isValidPhoneNumber, parsePhoneNumber } from "libphonenumber-js/mobile";
+import { CountryCode, getCountries, getCountryCallingCode, isPossiblePhoneNumber, isValidPhoneNumber, parsePhoneNumber } from "libphonenumber-js/mobile";
 import { LoadingIndicator } from "../../components/Utils";
-import { Button } from "react-native-paper";
+import { Button, HelperText, TextInput, useTheme } from "react-native-paper";
+import { PaperSelect } from 'react-native-paper-select';
+import { AppTheme } from "../../theme";
+
+type SelectPaperProps = {
+    value: string,
+    list: Array<{
+        _id: string,
+        value: string,
+    }>,
+    selectedList: Array<{
+        _id: string,
+        value: string,
+    }>,
+    error: '',
+}
+
+export const selectValidator = (value: any) => {
+    if (!value || value.length <= 0) {
+        return 'Vui lòng chọn một giá trị.';
+    }
+
+    return '';
+};
 
 function Login({ navigation }: LoginProps): JSX.Element {
 
     const countries = getCountries()
 
-    const [selectedNationIndex, setSelectedNationIndex] = useState(new IndexPath(235));
     const [phoneNumber, setPhoneNumber] = useState("")
     const [e164Number, setE164Number] = useState<string>("")
     const [invalidPhoneNumber, setInvalidPhoneNumber] = useState<string>("")
     const [loading, setLoading] = useState<boolean>(false)
 
-    
+    const [selectPaper, setSelectPaper] = useState<SelectPaperProps>({
+        value: '',
+        list: countries.map((country) => {
+            return {
+                _id: country,
+                value: country
+            }
+        }),
+        error: '',
+        selectedList: []
+    })
 
     useEffect(() => {
-        if (isValidPhoneNumber(phoneNumber, countries[selectedNationIndex.row])) {
-            const phone = parsePhoneNumber(phoneNumber, countries[selectedNationIndex.row])
+        let isMounted = true;
+        let _getData = async () => {
+            if (isMounted) {
+                setSelectPaper({
+                    ...selectPaper,
+                    value: 'VN',
+                    selectedList: [{ _id: 'VN', value: 'VN' }],
+                });
+            }
+        };
+
+        _getData();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+
+    useEffect(() => {
+        // console.log(countries)
+        if (isValidPhoneNumber(phoneNumber, selectPaper.value as CountryCode)) {
+            const phone = parsePhoneNumber(phoneNumber, selectPaper.value as CountryCode)
             setE164Number(phone.number)
             setInvalidPhoneNumber("")
         }
@@ -39,18 +90,12 @@ function Login({ navigation }: LoginProps): JSX.Element {
 
 
 
-    const changePhoneNumber = () => {
-        const callingCode = getCountryCallingCode(countries[selectedNationIndex.row])
-
-
-
-    }
 
 
     // Handle the button press
     async function signInWithPhoneNumber() {
 
-        
+
 
         if (invalidPhoneNumber.length > 0 || e164Number.length == 0) return
 
@@ -61,9 +106,9 @@ function Login({ navigation }: LoginProps): JSX.Element {
                 navigation.navigate('VerifyOtpCode', {
                     phoneNumber: e164Number,
                     verificationId: confirmation.verificationId
-                } );
+                });
             else
-                Alert.alert('Đã xảy ra lỗi','Không thể gửi mã xác minh')
+                Alert.alert('Đã xảy ra lỗi', 'Không thể gửi mã xác minh')
         }
         catch (err) {
             console.log(err)
@@ -73,34 +118,66 @@ function Login({ navigation }: LoginProps): JSX.Element {
 
     }
 
+    const theme = useTheme<AppTheme>()
+
     return (
         <SafeAreaView>
             {/* UI kittin + style */}
-            <View style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 40 }}>
+            <View style={{ gap: 10, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 40 }}>
                 <Text className="text-3xl self-start text-neutral-700">
                     Nhập số điện thoại của bạn
                 </Text>
                 <Text className="self-start text-gray-700 text-md">
                     Chúng tôi sẽ gửi đến bạn mã xác minh
                 </Text>
-                <View className="flex flex-row w-full items-start gap-2 mt-5">
-                    <Select
-                        value={countries[selectedNationIndex.row]}
-                        status="primary"
-                        style={{
-                            width: '30%'
+                <View style={{
+                    flexDirection: 'row',
+                    width: '100%',
+                    alignItems: 'flex-start',
+                    gap: 2,
+                    marginTop: 5
+                }}>
+        
+                    <PaperSelect
+                        textInputMode="outlined"
+                        containerStyle={{
+                            width: '30%',
                         }}
-                        label={"Quốc gia"}
-                        size="large"
-                        caption={'+' + getCountryCallingCode(countries[selectedNationIndex.row])}
-                        selectedIndex={selectedNationIndex}
-                        onSelect={index => setSelectedNationIndex(index as IndexPath)}>
-                        {countries.map((value, index) => (
-                            <SelectItem title={value} key={index} />
-                        ))}
+                        label={selectPaper.value}
+                        value={selectPaper.value}
+                        onSelection={(v) => {
+                            setSelectPaper({
+                                ...selectPaper,
+                                value: v.text,
+                                selectedList: v.selectedList,
+                                error: '',
+                            })
+                        }}
+                        arrayList={[...selectPaper.list]}
+                        selectedArrayList={[...selectPaper.selectedList]}
+                        errorText={selectPaper.error}
+                        multiEnable={false}
+                        textInputStyle={{
 
-                    </Select>
-                    <Input
+                        }}
+                    />
+                    <View style={{
+                        flex: 1,
+                    }}>
+                        <TextInput
+                            label="Số điện thoại"
+                            mode="outlined"
+                            keyboardType="phone-pad"
+                            placeholder="090 123 4567"
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                        />
+                        <HelperText type="error" visible={invalidPhoneNumber.length > 0}>
+                            { invalidPhoneNumber }
+                        </HelperText>
+                    </View>
+
+                    {/* <Input
                         keyboardType="phone-pad"
                         status="primary"
                         style={{
@@ -112,9 +189,9 @@ function Login({ navigation }: LoginProps): JSX.Element {
                         caption={invalidPhoneNumber}
                         value={phoneNumber}
                         onChangeText={(text: string) => { setPhoneNumber(text); changePhoneNumber() }}
-                    />
+                    /> */}
                 </View>
-                
+
 
                 <Button
                     icon="arrow-right"

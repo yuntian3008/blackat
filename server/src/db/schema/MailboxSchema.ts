@@ -62,7 +62,7 @@ const MailSchema = new Schema<IMail>({
 })
 
 export interface MailModel extends Model<IMail> {
-    remove(id: Types.ObjectId): Promise<void>
+    rm(id: Types.ObjectId): Promise<void>
     getAll(device: Types.ObjectId): Promise<Array<Server.Mail>>
     clearAll(device: Types.ObjectId): Promise<void>
     add(device: Types.ObjectId,mail: Server.MessagePackage): Promise<string> 
@@ -134,8 +134,8 @@ MailSchema.static('clearAll', async function clearAll(device: Types.ObjectId): P
     })
 })
 
-MailSchema.static('remove', async function remove(id: Types.ObjectId): Promise<void> {
-    const mails = await Mail.findByIdAndDelete(id)
+MailSchema.static('rm', async function rm(id: Types.ObjectId): Promise<void> {
+    const mails = await Mail.findByIdAndRemove(id)
 })
 
 MailSchema.static('add', async function add(device: Types.ObjectId, mail: Server.MessagePackage): Promise<string> {

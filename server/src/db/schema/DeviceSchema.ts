@@ -4,11 +4,11 @@ import User from "../model/User";
 import { Type } from "typescript";
 
 export interface IDevice {
-    deviceId : number,
+    deviceId: number,
     registrationId: number,
     user: Types.ObjectId,
     key: Types.ObjectId,
-    mailbox: Types.ObjectId,
+    // mailbox: Types.ObjectId,
     fcmToken?: string,
 }
 
@@ -16,7 +16,7 @@ export interface DeviceModel extends Model<IDevice> {
     getId(phoneNumber: string, deviceId: number): Promise<Types.ObjectId>
 }
 
-const DeviceSchema = new Schema<IDevice, DeviceModel> ({
+const DeviceSchema = new Schema<IDevice, DeviceModel>({
     deviceId: {
         type: Number, default: null,
     },
@@ -31,10 +31,10 @@ const DeviceSchema = new Schema<IDevice, DeviceModel> ({
         type: Schema.Types.ObjectId,
         ref: 'Key'
     },
-    mailbox: {
-        type: Schema.Types.ObjectId,
-        ref: 'Mailbox'
-    },
+    // mailbox: {
+    //     type: Schema.Types.ObjectId,
+    //     ref: 'Mailbox'
+    // },
     fcmToken: {
         type: String,
         default: null,
@@ -46,16 +46,21 @@ DeviceSchema.index({
 }, {
     unique: true
 })
-DeviceSchema.pre('save', function(next) {
-    let device = this
-    Counter.inc(device.user,'device').then((deviceId) => {
-        console.log("truoc khi save", deviceId)
-        device.deviceId = deviceId
+DeviceSchema.pre('save', function (next) {
+    if (this.isNew) {
+        let device = this
+        Counter.inc(device.user, 'device').then((deviceId) => {
+            console.log("truoc khi save", deviceId)
+            device.deviceId = deviceId
+            next()
+        }).catch(err => next(err))
+    } else {
         next()
-    }).catch(err => next(err))
+    }
+
 })
 
-DeviceSchema.static('getId', async function getId(phoneNumber:string, deviceId: number): Promise<Types.ObjectId> {
+DeviceSchema.static('getId', async function getId(phoneNumber: string, deviceId: number): Promise<Types.ObjectId> {
     const user = await User.findOne({
         phoneNumber: phoneNumber
     })

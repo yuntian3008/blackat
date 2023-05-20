@@ -5,7 +5,6 @@ import User from "../model/User";
 import { IDevice } from "./DeviceSchema";
 import { LoggedInfo, Signal } from "../../../../shared/types";
 import Key from "../model/Key";
-import Mailbox from "../model/Mailbox";
 
 export interface IUser {
     phoneNumber: string,
@@ -84,17 +83,17 @@ UserSchema.static('login',async function login(e164: string, registrationId: num
                 device: newDevice._id
             }).save()
 
-            const newMailbox = await new Mailbox({
-                box: [],
-                device: newDevice._id
-            }).save()
+            // const newMailbox = await new Mailbox({
+            //     box: [],
+            //     device: newDevice._id
+            // }).save()
             
 
             userWithDevice.devices.push(newDevice)
             await userWithDevice.save()
 
             newDevice.key = newKey._id
-            newDevice.mailbox = newMailbox._id
+            // newDevice.mailbox = newMailbox._id
             await newDevice.save()
 
             result.info.isNewDevice = true
