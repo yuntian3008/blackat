@@ -18,8 +18,14 @@ interface PrivateMessageDao {
     @Query("DELETE FROM private_message")
     suspend fun deleteAll()
 
+    @Query("DELETE FROM private_message WHERE privateConversationId = :privateConversationId")
+    suspend fun delete(privateConversationId: Int)
+
     @Query("UPDATE private_message SET state = :messageState WHERE id = :id")
     suspend fun changeState(messageState: MessageState, id: Int)
+
+    @Query("UPDATE private_message SET state = :messageState WHERE state = :oldMessageState AND privateConversationId = :conversationId")
+    suspend fun changeStateFromState(messageState: MessageState, oldMessageState: MessageState, conversationId: Int)
 
     @Query(
             "SELECT private_message.*, private_conversation.e164 " +

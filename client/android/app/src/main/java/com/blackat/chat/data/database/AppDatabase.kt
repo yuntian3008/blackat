@@ -11,12 +11,14 @@ import com.blackat.chat.data.model.*
 
 @Database(entities = [
     PrivateConversation::class,
-    PrivateMessage::class
+    PrivateMessage::class,
+    Partner::class
 ], version = 100)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun privateConversationDao(): PrivateConversationDao
     abstract fun privateMessageDao(): PrivateMessageDao
+    abstract fun partnerDao(): PartnerDao
 
     companion object {
         @Volatile

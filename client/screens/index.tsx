@@ -15,7 +15,10 @@ export type HomeProps = StackScreenProps<RootStackParamList, 'Home'>;
     export type ContactProps = MaterialTopTabScreenProps<RootHomeTabParamList, 'Contact'>;
 
 export type SearchProps = StackScreenProps<RootStackParamList, 'Search'>;
+export type PartnerProps = StackScreenProps<RootStackParamList, 'Partner'>;
+
 export type NewContactProps = StackScreenProps<RootStackParamList, 'NewContact'>;
 export type ChatZoneProps = StackScreenProps<RootStackParamList, 'ChatZone'>;
 
 export type ImageViewProps = StackScreenProps<RootStackParamList, 'ImageView'>;
+export type QrscannerProps = StackScreenProps<RootStackParamList, 'Qrscanner'>;

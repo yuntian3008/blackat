@@ -1,5 +1,5 @@
-import { Alert, Keyboard, SafeAreaView, TextInput as RNTextInput, ToastAndroid, View } from "react-native";
-import { Avatar, Button, Divider, IconButton, List, Menu, Modal, Portal, Searchbar, Text, TextInput, useTheme } from "react-native-paper";
+import { Alert, Keyboard, SafeAreaView, TextInput as RNTextInput, ToastAndroid, View, KeyboardEvent, BackHandler } from "react-native";
+import { Avatar, Button, Dialog, Divider, IconButton, List, Menu, Modal, Portal, Searchbar, Text, TextInput, useTheme } from "react-native-paper";
 import { ChatZoneProps } from "..";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header, { HeaderItems } from "../../components/Header";
@@ -13,35 +13,35 @@ import socket, { getAddresses, getPreKeyBundle, outGoingMessage } from "../../ut
 import SignalModule from "../../native/android/SignalModule";
 import { el, ms } from "date-fns/locale";
 import AppModule from "../../native/android/AppModule";
-import { useAppSelector } from "../../hooks";
+import { useAppSelector, useKeyboardHeight } from "../../hooks";
 import { ImagePickerResponse, launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import BottomSheet, { BottomSheetModal, BottomSheetModalProvider, BottomSheetView } from '@gorhom/bottom-sheet';
 import Log from "../../utils/Log";
 import { encryptAndSendMessage, saveMessageToLocal } from "../../utils/Messaging";
-
+import { useColorScheme } from "react-native";
+import { darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../../theme";
+import { ChatController } from "../../components/ChatController";
 
 
 export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Element {
     const theme = useTheme()
-    const [message, setMessage] = useState<string>('');
-    const [isTextInputFocused, setIsTextInputFocused] = useState<boolean>(false);
-    // const [partnerIsTyping, setPartnerIsTyping] = useState<string[]>([
-    // ])
     const [bubbles, setBubbles] = useState<ChatItemProps[]>([])
     const [conversationState, setConversationState] = useState<ConversationState>(ConversationState.unknown)
-    const [visibleEmoji, setVisibleEmoji] = useState<boolean>(false)
-
-
-    const [conversation, setConversation] = useState<App.Types.Conversation>()
-
 
     const [initializing, setInitializing] = useState<boolean>(true)
-    const [newConversation, setNewConversation] = useState<boolean>(false)
     const [localAddress, setLocalAddress] = useState<Signal.Types.SignalProtocolAddress>()
 
     const socketConnection = useAppSelector(state => state.socketConnection.value)
 
-    const onChangeMessage = (message: string) => setMessage(message);
+    const [visibleDialog, setVisibleDialog] = useState(false);
+
+    const showDialog = () => setVisibleDialog(true);
+
+    const hideDialog = () => setVisibleDialog(false);
+    const [dialogData, setDialogData] = useState<App.Types.DialogData>({
+        icon: 'information',
+        title: '',
+        content: ''
+    })
 
     // LOAD LOCAL ADDRESS
     useEffect(() => {
@@ -86,19 +86,46 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     }, [conversationData])
 
-
+    const schema = useColorScheme()
     const headerItems: HeaderItems[] = [
         {
             label: 'dots-vertical',
             items: [
                 {
-                    label: 'Xóa trò chuyện',
-                    onPress: () => console.log('ok')
+                    label: 'Xóa cuộc trò chuyện',
+                    onPress: () => {
+                        setDialogData({
+                            icon: 'help',
+                            title: `Bạn có chắc muốn xóa cuộc trò chuyện với ${route.params.e164} ?`,
+                            content: `Dữ liệu trò chuyện này chỉ được xóa ở phía bạn và không thể khôi phục.`,
+                            cancel: () => {
+                                hideDialog()
+                            },
+                            ok: () => {
+                                hideDialog()
+                                AppModule.removeConversation(route.params.e164).then((v) => {
+                                    if (v) {
+                                        navigation.goBack()
+                                        setDialogData({
+                                            'icon': 'information',
+                                            title: 'Xóa cuộc trò chuyện thành công',
+                                            content: 'Dữ liệu trò chuyện đã được xóa'
+                                        })
+                                        showDialog()
+                                    } else {
+                                        setDialogData({
+                                            'icon': 'alert',
+                                            title: 'Xóa cuộc trò chuyện không thành công',
+                                            content: 'Đã xảy ra lỗi, vui lòng thử lại'
+                                        })
+                                        showDialog()
+                                    }
+                                })
+                            }
+                        })
+                        showDialog()
+                    }
                 },
-                {
-                    label: 'Tắt thông báo',
-                    onPress: () => console.log('ok')
-                }
 
             ]
         }
@@ -118,7 +145,18 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 sentAt: message.timestamp,
                 partner: (message.owner == App.MessageOwner.PARTNER) ? {
                     name: route.params.e164
-                } : undefined
+                } : undefined,
+                // onPartnerAvatarPress: (message.owner == App.MessageOwner.PARTNER) ? () => {
+                //     AppModule.getPartner(route.params.e164).then((partner) => {
+                //         if (partner !== null)
+                //             navigation.navigate('Partner', {
+                //                 partner: partner
+                //             })
+                //     }).catch((err) => {
+                //         Alert.alert("Không tìm thấy thông tin")
+                //         console.log(err)
+                //     })
+                // } : undefined,
             }
         }
     }
@@ -144,13 +182,13 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             }
             await saveMessageToLocal(route.params.e164, messageData, messageState, fileInfo)
         } catch (e) {
-
+            setConversationState(ConversationState.error)
+            console.log(e)
         }
-
     }
 
     const handleText = async (msg: string) => {
-        
+
         const messageData: App.Types.MessageData = {
             data: msg,
             owner: App.MessageOwner.SELF,
@@ -163,11 +201,23 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         // await saveMessageToLocal(messageData)
     }
 
-    const submitTextMessage = () => {
-        if (message.length == 0) ToastAndroid.show("Không thể gửi tin nhắn trống", ToastAndroid.SHORT)
-        const msg = message
-        setMessage('')
-        handleText(msg)
+    const handleSticker = async (sticker: string) => {
+        const messageData: App.Types.MessageData = {
+            data: sticker,
+            owner: App.MessageOwner.SELF,
+            timestamp: formatISO(new Date()),
+            type: App.MessageType.STICKER
+        }
+        addMessage(messageData)
+        await canSending(messageData)
+    }
+
+    const submitTextMessage = (message: string) => {
+        if (message.length == 0) {
+            ToastAndroid.show("Không thể gửi tin nhắn trống", ToastAndroid.SHORT)
+            return
+        }
+        handleText(message)
 
     }
 
@@ -208,7 +258,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
 
     const openImagePicker = async () => {
         // handleDismissModalPress()
-        closeMenu()
         const result = await launchImageLibrary({
             mediaType: 'photo',
             includeBase64: true,
@@ -219,7 +268,6 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
 
     const openCamera = async () => {
         // handleDismissModalPress()
-        closeMenu()
         const result = await launchCamera({
             mediaType: 'photo',
             includeBase64: true,
@@ -265,16 +313,32 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     //     console.log('handleSheetChanges', index);
     // }, []);
 
-    const [visible, setVisible] = useState(false);
-
-    const openMenu = () => setVisible(true);
-
-    const closeMenu = () => setVisible(false);
-
-    const color = useTheme()
 
     return (
         <SafeAreaView>
+            <Portal>
+                <Dialog visible={visibleDialog} style={{ borderRadius: 20 }} onDismiss={hideDialog} theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness}>
+                    <Dialog.Icon icon={dialogData.icon} />
+                    <Dialog.Title>{dialogData.title}</Dialog.Title>
+                    <Dialog.Content>
+                        <Text variant="bodyMedium">{dialogData.content}</Text>
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => {
+                            if (dialogData.cancel)
+                                dialogData.cancel()
+                            else
+                                hideDialog()
+                        }}>Hủy</Button>
+                        <Button onPress={() => {
+                            if (dialogData.ok)
+                                dialogData.ok()
+                            else
+                                hideDialog()
+                        }}>OK</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
             {/* // <BottomSheetModalProvider> */}
             <View style={{ gap: 5, flexDirection: 'column-reverse', alignItems: 'center', height: '100%' }}>
                 {
@@ -308,42 +372,14 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                     </BottomSheetModal> */
                 }
 
+                <ChatController
+                    onCameraPress={openCamera}
+                    onGalleryPress={openImagePicker}
+                    onSendPress={submitTextMessage}
+                    onChooseSticker={handleSticker}
+                />
 
-                <View style={{ gap: 5, borderTopWidth: 0.5, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 15, paddingVertical: 10, alignItems: 'center', alignContent: 'center' }}>
-                    <Menu
-                        visible={visible}
-                        onDismiss={closeMenu}
-                        anchorPosition="top"
-                        anchor={<IconButton size={28} style={{}} mode="contained" onPress={openMenu} icon={'camera-image'} />}>
-                        <Menu.Item onPress={openCamera} leadingIcon={'camera'} title="Máy ảnh" />
-                        <Menu.Item onPress={openImagePicker} leadingIcon={'image'} title="Thư viện" />
-                    </Menu>
-                    <TextInput label={'Nhập tin nhắn'} mode="outlined"
-                        placeholder="Nhập tin nhắn"
-                        // ref={messageInputRef}
-                        // autoFocus={true}
-                        value={message}
-                        style={{
-                            flex: 1,
-                            zIndex: 10,
-                        }}
-                        onChangeText={onChangeMessage}
-                        onFocus={() => {
-                            setIsTextInputFocused(!isTextInputFocused)
-                        }}
-                        right={(message.length > 0)
-                            ?
-                            <TextInput.Icon onPress={submitTextMessage} icon={'send'} color={() => theme.colors.primary} />
-                            :
-                            <TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'paperclip'} color={() => theme.colors.primary} />
-                            // <TextInput.Icon onPress={handleCamera} icon={'camera'} color={() => theme.colors.primary} />
 
-                        }
-                        left={<TextInput.Icon onPress={() => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)} icon={'sticker-emoji'} color={(isTextInputFocused) => theme.colors.primary} />}
-                    />
-
-                    {/* { message.length > 0 && } */}
-                </View>
                 {/* <Divider style={{ width: '100%' }} /> */}
 
                 <Chat items={bubbles} conversationState={conversationState} />

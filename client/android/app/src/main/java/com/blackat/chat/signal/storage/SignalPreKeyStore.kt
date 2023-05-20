@@ -6,6 +6,7 @@ import com.blackat.chat.data.model.ECKeyPairModel
 import com.blackat.chat.data.model.OneTimePreKey
 import com.blackat.chat.data.model.SignedPreKey
 import kotlinx.coroutines.runBlocking
+import org.signal.libsignal.protocol.InvalidKeyIdException
 import org.signal.libsignal.protocol.ecc.ECKeyPair
 import org.signal.libsignal.protocol.state.*
 
@@ -13,6 +14,8 @@ class SignalPreKeyStore(
         private val preKeyStore: OneTimePreKeyDao,
 ) : PreKeyStore {
     override fun loadPreKey(preKeyId: Int): PreKeyRecord  = runBlocking {
+        if (!preKeyStore.contain(preKeyId))
+            throw InvalidKeyIdException("no such prekeyrecord!")
         preKeyStore.get(preKeyId).getPreKeyRecord()
     }
 

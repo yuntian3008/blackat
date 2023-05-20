@@ -22,6 +22,7 @@ export type Conversation = {
 export enum BubbleChatType {
     text,
     image,
+    sticker,
     file,
     video,
     unknown
@@ -33,7 +34,8 @@ export function toBubbleChatType(type: number): BubbleChatType {
             return BubbleChatType.text
         case App.MessageType.IMAGE:
             return BubbleChatType.image
-
+        case App.MessageType.STICKER:
+            return BubbleChatType.sticker
         default:
             return BubbleChatType.unknown
     }
@@ -74,6 +76,15 @@ const StateBadge = ({ state }: { state: ConversationState }): JSX.Element => {
             bg = useTheme().colors.tertiary
             icon = 'check-all'
             break;
+        case ConversationState.error:
+            return (
+                <Avatar.Icon
+                    style={{ backgroundColor: bg, borderWidth: 1, margin: 1, borderColor: useTheme().colors.error }}
+                    color={useTheme().colors.errorContainer}
+                    icon={'alert-circle'}
+                    size={16}
+                />
+            )
         default:
             bg = null
             icon = null
@@ -104,7 +115,7 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
         return format(date, dateFormat, { locale: vi })
     }
 
-    const { width , height} = useWindowDimensions()
+    const { width, height } = useWindowDimensions()
     const schema = useColorScheme()
     const theme = useTheme()
 
@@ -168,16 +179,31 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
                                     //         flex: 1,
                                     //     }}/>
                                     // </Card.Content>
-                                    
+
                                     <Card.Cover theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness} source={{ uri: content, width: (width * 0.6), height: 1000 }} resizeMode="cover" style={{
                                         minWidth: "100%",
                                         borderRadius: 20,
                                         overflow: 'hidden',
-                                        borderWidth: 0.5,
-                                        borderColor: theme.colors.secondary
                                     }} />
                                 )
-                                
+
+                            case BubbleChatType.sticker:
+                                return (
+                                    // <Card.Content style={{ flex: 1, backgroundColor: "transparent" }}>
+                                    //     <Image source={{ uri: content, width: (width * 0.6), height: 150 }} resizeMode="cover" borderRadius={20} style={{
+                                    //         flex: 1,
+                                    //     }}/>
+                                    // </Card.Content>
+
+                                    <Card.Cover theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness} source={{ uri: content, width: 150, height: 150 }} resizeMode="cover" style={{
+                                        minWidth: 100,
+                                        height: 100,
+                                        borderRadius: 20,
+                                        overflow: 'hidden',
+                                        backgroundColor: 'transparent',
+                                    }} />
+                                )
+
                             default:
                                 return null
                         }
@@ -263,7 +289,7 @@ export enum ChatItemKind {
 
 export type ChatItemProps = {
     kind: ChatItemKind,
-    data: BubbleChat | string[]
+    data: BubbleChat
 }
 
 
@@ -274,7 +300,9 @@ export default function ChatItem({
     switch (kind) {
         case ChatItemKind.bubble:
             return <BubbleChat {...data as BubbleChat} />
-        case ChatItemKind.typing:
-            return <Typing images={data as string[]} />
+        default:
+            return <></>
+        // case ChatItemKind.typing:
+        //     return <Typing images={data as string[]} />
     }
 }

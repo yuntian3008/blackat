@@ -93,6 +93,25 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
 //    }
 
     @ReactMethod
+    fun removeConversation(e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+
+
+                    return@withContext AppRepository.privateConversation().remove(e164)
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
     fun createConversation(e164: String, firstMessage: ReadableMap, promise: Promise) {
         scope.launch {
             try {
@@ -133,6 +152,27 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
             }
         }
     }
+
+    @ReactMethod
+    fun getPartner(e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val partner = AppRepository.partner().getByE164(e164)
+
+
+                    return@withContext partner?.let { WritableMapUtils.getPartner(partner) };
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
     @ReactMethod
     fun getSendingMessages(promise: Promise) {
         scope.launch {
@@ -168,6 +208,48 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
     }
 
     @ReactMethod
+    fun markAllPartnerMessageAsRead(conversationId: Int, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.privateMessage().markAllPartnerMessageAsRead(conversationId)
+
+
+                    return@withContext;
+                }
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("testError",e.stackTraceToString())
+            }
+        }
+    }
+
+    @ReactMethod
+    fun markAllPartnerMessageAsUnread(conversationId: Int, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.privateMessage().markAllPartnerMessageAsUnread(conversationId)
+
+
+                    return@withContext;
+                }
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("testError",e.stackTraceToString())
+            }
+        }
+    }
+
+    @ReactMethod
     fun markAsSent(id: Int, promise: Promise) {
         scope.launch {
             try {
@@ -195,6 +277,10 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
         fileInfoMap?.let {
             msg.fileInfo = ReadableMapUtils.getFileInfo(it)
         }
+
+        val partner = AppRepository.partner().getByE164(e164)
+        partner ?: AppRepository.partner().upsert(e164,0)
+
         conversation?.let {
             AppRepository.privateMessage().save(msg,it.id!!)
         } ?: AppRepository.privateConversation().create(e164,msg)

@@ -1,10 +1,10 @@
 import { formatISO } from "date-fns";
 import { App, BundleRequirement, Server, Signal, SignalError, SocketEvent } from "../../shared/types";
 import SignalModule from "../native/android/SignalModule";
-import Log from "./Log";
+import Log, { LogEnabled } from "./Log";
 import socket from "./socket";
 import AppModule from "../native/android/AppModule";
-import { Alert, AppState, BackHandler } from "react-native";
+import { Alert, AppState, BackHandler, ToastAndroid } from "react-native";
 import notifee from "@notifee/react-native"
 import { pushInComingMessageNotification } from "./Fcm";
 
@@ -18,9 +18,9 @@ const emitCheckMailBox = () => {
     })
 }
 
+
 export const prepareMessaging = async () => {
-    const mailbox = await emitCheckMailBox()
-    await mailboxHandler(mailbox)
+    await mailboxHandler()
     const sendingMessage = await AppModule.getSendingMessages();
     const localAddress = await SignalModule.requireLocalAddress()
     for (let i = 0; i < sendingMessage.length; i++) {
@@ -124,26 +124,30 @@ const syncSession = async function (e164: string) {
 
 // ====================== MESSAGING
 
+// export const outGoingMessage = async (
+//     sender: Signal.Types.SignalProtocolAddress,
+//     address: Signal.Types.SignalProtocolAddress,
+//     message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => {
+//         if (socket.connected)
+//             socket.emit('outGoingMessage', sender, address, message, (v) => {
+//                 resolve(v)
+//             })
+//         else {
+//             resolve({
+//                 sentAt: SocketEvent.SendAt.FAILED
+//             })
+//         }
+
+//     })
+
+export const onNewMessage = () => {
+    mailboxHandler()
+}
+
 export const outGoingMessage = async (
-    sender: Signal.Types.SignalProtocolAddress,
-    address: Signal.Types.SignalProtocolAddress,
-    message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> => new Promise((resolve, reject) => {
-        if (socket.connected)
-            socket.emit('outGoingMessage', sender, address, message, (v) => {
-                resolve(v)
-            })
-        else {
-            resolve({
-                sentAt: SocketEvent.SendAt.FAILED
-            })
-        }
-
-    })
-
-export const outGoingMessageV2 = async (
     sender: Signal.Types.SignalProtocolAddress, messages: Array<Server.MessagePackage>): Promise<boolean> => new Promise((resolve) => {
         if (socket.connected)
-            socket.emit('outGoingMessageV2', sender, messages, (v) => {
+            socket.emit('outGoingMessage', sender, messages, (v) => {
                 resolve(v)
             })
         else {
@@ -151,34 +155,27 @@ export const outGoingMessageV2 = async (
         }
     })
 
-export const inComingMessage = (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => {
-    Log(`Có tin nhắn mới từ ${sender.e164}`)
-    Log(message)
-
-
-    receiveAndDecryptMessage(sender, message).then((messageData) => {
+export const inComingMessage = async (sender: Signal.Types.SignalProtocolAddress, message: Server.Message) => {
+    try {
+        const messageData = await receiveAndDecryptMessage(sender, message)
         if (messageData !== null) {
-            saveMessageToLocal(sender.e164, messageData, App.MessageState.UNKNOWN)
+            await saveMessageToLocal(sender.e164, messageData, App.MessageState.UNREAD)
             if (AppState.currentState.match(/inactive|background/)) {
                 pushInComingMessageNotification(
-                    sender.e164, { 
-                        ...messageData,
-                        // Nếu là không phải dạng Text, bỏ bớt data (có thể là file kích thước lớn)
-                        data: messageData.type !== App.MessageType.TEXT ? "" : messageData.data
-                    }
+                    sender.e164, {
+                    ...messageData,
+                    // Nếu là không phải dạng Text, bỏ bớt data (có thể là file kích thước lớn)
+                    data: messageData.type !== App.MessageType.TEXT ? "" : messageData.data
+                }
                 )
             }
         }
-        callback({
-            isProcessed: true
-        })
-    }).catch((e) => {
+    }
+    catch (e) {
         console.log("Bắt đc nè")
         console.log(e)
-        callback({
-            isProcessed: false
-        })
-    })
+        throw e
+    }
 
 }
 
@@ -223,7 +220,10 @@ export const receiveAndDecryptMessage = async (sender: Signal.Types.SignalProtoc
                     timestamp: formatISO(new Date())
                 }
 
-                const result = await outGoingMessage(localAddress, sender, emptyMessage)
+                const result = await outGoingMessage(localAddress, [{
+                    address: sender,
+                    message: emptyMessage
+                }])
                 if (message.fileInfo !== undefined) {
                     plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
                 }
@@ -274,47 +274,43 @@ export const encryptAndSendMessage = async function (
             address: address,
             message: cipherMessage
         })
-        // const outGoingMessageResult = await outGoingMessage(localAddress, address, cipherMessage)
-        // console.log(outGoingMessageResult)
-        // // console.log("sendResult[" + address.deviceId + "]: " + result)
-        // if (outGoingMessageResult.sentAt !== SocketEvent.SendAt.FAILED) {
-        //     result = true
-        // }
     }
-    // Alert.alert(messages.size + "")
-    const send = await outGoingMessageV2(localAddress, messages)
+    const send = await outGoingMessage(localAddress, messages)
     return send
 
 }
 
-const findErrorMails = async (messages: Array<Server.Mail>): Promise<Array<Server.Mail>> => {
-    var errorMessage: Array<Server.Mail> = []
-    console.log("Có " + messages.length + " mail cần check")
-    for (let message of messages) {
+// const findErrorMails = async (messages: Array<Server.Mail>): Promise<Array<Server.Mail>> => {
+//     var errorMessage: Array<Server.Mail> = []
+//     console.log("Có " + messages.length + " mail cần check")
+//     for (let message of messages) {
+//         try {
+//             console.log("Đang check " + message.sender.e164)
+//             const msgData = await receiveAndDecryptMessage(message.sender, message.message)
+//             if (msgData !== null) {
+//                 saveMessageToLocal(message.sender.e164, msgData, App.MessageState.UNREAD)
+//                 AppModule.ting(message.sender.e164)
+//             }
+
+//         } catch (e) {
+//             errorMessage.push(message)
+//         }
+//     }
+//     return errorMessage
+// }
+
+export const mailboxHandler = async (): Promise<void> => {
+    const mails = await emitCheckMailBox()
+    for (let mail of mails) {
         try {
-            console.log("Đang check " + message.sender.e164)
-            const msgData = await receiveAndDecryptMessage(message.sender, message.message)
-            if (msgData !== null) {
-                saveMessageToLocal(message.sender.e164, msgData, App.MessageState.UNKNOWN)
-                AppModule.ting(message.sender.e164)
-            }
-
+            await inComingMessage(mail.sender, mail.message)
+            socket.emit('deleteMail', mail.id)
         } catch (e) {
-            errorMessage.push(message)
+            if (LogEnabled)
+                ToastAndroid.show("Xử lí tin nhắn đến thất bại [BÁO NGAY!!]", ToastAndroid.SHORT);
         }
+        
     }
-    return errorMessage
-}
-
-export const mailboxHandler = async (messages: Array<Server.Mail>): Promise<void> => {
-    const errors = await findErrorMails(messages)
-
-    console.log("Đã check mail với " + errors.length + " mail bị lỗi")
-    if (errors.length > 0) {
-        console.log("Các mail xử lí thất bại")
-        console.log(errors)
-    }
-
     return;
 
 }

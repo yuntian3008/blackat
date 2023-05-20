@@ -1,6 +1,7 @@
 package com.blackat.chat.signal.storage
 
 import com.blackat.chat.data.dao.OneTimePreKeyDao
+import com.blackat.chat.data.dao.PartnerDao
 import com.blackat.chat.data.dao.PrivateConversationDao
 import com.blackat.chat.data.dao.PrivateMessageDao
 import com.blackat.chat.data.dao.SignedPreKeyDao
@@ -13,14 +14,27 @@ import org.signal.libsignal.protocol.state.*
 class PrivateConversationStore(
         private val conversationStore: PrivateConversationDao,
         private val messageStore: PrivateMessageDao,
+        private val partnerStore: PartnerDao,
 ) {
     suspend fun contain(e164: String): Boolean {
         return conversationStore.contain(e164)
     }
 
+    suspend fun remove(e164: String): Boolean {
+        if (contain(e164)) {
+            val conversation = conversationStore.get(e164)
+            messageStore.delete(conversation!!.id!!)
+            conversationStore.delete(e164)
+            return true
+        }
+        return false
+    }
+
     suspend fun create(e164: String, firstMessage: Message): Int? {
         if (contain(e164)) return null
-        val id = conversationStore.insert(PrivateConversation(e164))
+        val partnerId = partnerStore.find(e164)
+        partnerId ?: return null
+        val id = conversationStore.insert(PrivateConversation(e164, partnerId))
         id ?: return null
         messageStore.insert(PrivateMessage(firstMessage,id.toInt()))
         return id.toInt()

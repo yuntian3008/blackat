@@ -2,11 +2,11 @@ import mongoose, { Document, Model, Query, Schema, Types } from "mongoose";
 import Counter from "../model/Counter";
 import User from "../model/User";
 import { Server, Signal } from "../../../../shared/types";
-import Mailbox from "../model/Mailbox";
 import { th } from "date-fns/locale";
+import Mail from "../model/Mail";
 
 export interface IMail {
-    e164 : string,
+    e164: string,
     deviceId: number,
     cipherMessage: string,
     cipherType: number,
@@ -14,7 +14,8 @@ export interface IMail {
     fileInfoType?: string,
     fileInfoSize?: number,
     type: number,
-    timestamp: string
+    timestamp: string,
+    device: Types.ObjectId,
 }
 
 const MailSchema = new Schema<IMail>({
@@ -53,45 +54,57 @@ const MailSchema = new Schema<IMail>({
     timestamp: {
         type: String,
         required: true
-    }
-})
-
-export interface IMailbox {
-    device: Types.ObjectId,
-    box: Types.Array<IMail>
-}
-
-export interface MailboxModel extends Model<IMailbox> {
-    getAll(device: Types.ObjectId): Promise<Array<Server.Mail>>
-    clearAll(device: Types.ObjectId): Promise<boolean>
-    add(device: Types.ObjectId,mail: Server.Mail): Promise<boolean> 
-}
-
-const MailboxSchema = new Schema<IMailbox, MailboxModel> ({
-    device:{
+    },
+    device: {
         type: Schema.Types.ObjectId,
         ref: 'Device'
     },
-    box: {
-        type: [MailSchema],
-        default: []
-    },
-})
-MailboxSchema.index({
-    device: 1,
-}, {
-    unique: true
 })
 
-MailboxSchema.static('getAll', async function getAll(device: Types.ObjectId): Promise<Array<Server.Mail>> {
-    const mailBox = await Mailbox.findOne({
+export interface MailModel extends Model<IMail> {
+    remove(id: Types.ObjectId): Promise<void>
+    getAll(device: Types.ObjectId): Promise<Array<Server.Mail>>
+    clearAll(device: Types.ObjectId): Promise<void>
+    add(device: Types.ObjectId,mail: Server.MessagePackage): Promise<string> 
+}
+
+// export interface IMailbox {
+//     device: Types.ObjectId,
+//     box: Types.Array<IMail>
+// }
+
+// export interface MailboxModel extends Model<IMailbox> {
+//     getAll(device: Types.ObjectId): Promise<Array<Server.Mail>>
+//     clearAll(device: Types.ObjectId): Promise<boolean>
+//     add(device: Types.ObjectId,mail: Server.Mail): Promise<boolean> 
+// }
+
+// const MailboxSchema = new Schema<IMailbox, MailboxModel> ({
+//     device:{
+//         type: Schema.Types.ObjectId,
+//         ref: 'Device'
+//     },
+//     box: {
+//         type: [MailSchema],
+//         default: []
+//     },
+// })
+// MailboxSchema.index({
+//     device: 1,
+// }, {
+//     unique: true
+// })
+
+MailSchema.static('getAll', async function getAll(device: Types.ObjectId): Promise<Array<Server.Mail>> {
+    const result = await Mail.find({
         device: device
     })
-    if (mailBox === null) return null
+    // if (mailBox === null) return null
 
     const mails: Array<Server.Mail> = []
-    mailBox.box.forEach((iMail) => {
+    result.forEach((iMail) => {
         mails.push({
+            id: iMail._id.toHexString(),
             sender: {
                 e164: iMail.e164,
                 deviceId: iMail.deviceId
@@ -115,38 +128,42 @@ MailboxSchema.static('getAll', async function getAll(device: Types.ObjectId): Pr
     return mails
 })
 
-MailboxSchema.static('clearAll', async function clearAll(device: Types.ObjectId): Promise<boolean> {
-    const mailBox = await Mailbox.findOneAndUpdate({
+MailSchema.static('clearAll', async function clearAll(device: Types.ObjectId): Promise<void> {
+    const mails = await Mail.deleteMany({
         device: device
-    }, {
-        box: []
     })
-    if (mailBox === null) return false
-
-    return true
 })
 
-MailboxSchema.static('add', async function add(device: Types.ObjectId, mail: Server.Mail): Promise<boolean>  {
-    const mailBox = await Mailbox.findOne({
-        device: device
-    })
-    if (mailBox === null) return false
+MailSchema.static('remove', async function remove(id: Types.ObjectId): Promise<void> {
+    const mails = await Mail.findByIdAndDelete(id)
+})
+
+MailSchema.static('add', async function add(device: Types.ObjectId, mail: Server.MessagePackage): Promise<string> {
+    // const mailBox = await Mailbox.findOne({
+    //     device: device
+    // })
+    // if (mailBox === null) return false
 
     const iMail: IMail = {
-        e164: mail.sender.e164,
-        deviceId: mail.sender.deviceId,
+        e164: mail.address.e164,
+        deviceId: mail.address.deviceId,
         cipherMessage: mail.message.data.cipher,
         cipherType: mail.message.data.type,
         fileInfoName: mail.message.fileInfo?.name,
         fileInfoType: mail.message.fileInfo?.type,
         fileInfoSize: mail.message.fileInfo?.size,
         type: mail.message.type,
-        timestamp: mail.message.timestamp
+        timestamp: mail.message.timestamp,
+        device: device
     }
 
-    mailBox.box.push(iMail)
-    const result = await mailBox.save()
-    return result !== null
+    const result = await Mail.create(iMail)
+
+    // mailBox.box.push(iMail)
+    // const result = await mailBox.save()
+    // return result !== null
+    return result._id.toString()
 })
 
-export default MailboxSchema
+
+export default MailSchema

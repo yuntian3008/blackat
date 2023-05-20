@@ -59,9 +59,11 @@ import { connected, disconnected } from './redux/SocketConnection';
 import { TopToast, TopToastType } from './components/TopToast';
 import { enqueueTopToast } from './redux/TopToast';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { inComingMessage, onBundleRequire, prepareMessaging } from './utils/Messaging';
+import { onBundleRequire, onNewMessage, prepareMessaging } from './utils/Messaging';
 import messaging from '@react-native-firebase/messaging'
 import notifee, { EventType } from '@notifee/react-native';
+import Partner from './screens/partner';
+import Qrscanner from './screens/qrscanner';
 
 
 
@@ -88,7 +90,13 @@ export type RootStackParamList = {
   },
   ImageView: {
     uri: string,
-  }
+  },
+  Partner: {
+    partner: AppTypes.Types.Partner,
+  },
+  Qrscanner: {
+    input?: any,
+  },
 };
 
 const deepLinksConf = {
@@ -278,7 +286,8 @@ function App(): JSX.Element {
     socket.on("connect_error", onConnectError);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('inComingMessage', inComingMessage)
+    socket.on('newMessage',onNewMessage);
+    // socket.on('inComingMessage', inComingMessage)
     // socket.on("sendMailbox", onMailBox)
 
     return () => {
@@ -288,7 +297,8 @@ function App(): JSX.Element {
       socket.off('connect_error', onConnectError);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('inComingMessage', inComingMessage)
+      socket.off('newMessage',onNewMessage)
+      // socket.off('inComingMessage', inComingMessage)
       // socket.off("sendMailbox", onMailBox)
 
     };
@@ -339,20 +349,20 @@ function App(): JSX.Element {
                       title: "Blackat",
                       headerRight: () => {
                         const menuItems: MenuItems[] = [
-                          {
-                            label: "test",
-                            onPress: () => {
-                              AppModule.test()
-                            }
-                          },
-                          {
-                            label: "Dev - clear all tables",
-                            onPress: () => {
-                              SignalModule.clearAllTables().then(() => {
-                                DevSettings.reload()
-                              })
-                            }
-                          },
+                          // {
+                          //   label: "test",
+                          //   onPress: () => {
+                          //     AppModule.test()
+                          //   }
+                          // },
+                          // {
+                          //   label: "Dev - clear all tables",
+                          //   onPress: () => {
+                          //     SignalModule.clearAllTables().then(() => {
+                          //       DevSettings.reload()
+                          //     })
+                          //   }
+                          // },
                           {
                             label: "Cài đặt",
                             onPress: () => {
@@ -382,6 +392,10 @@ function App(): JSX.Element {
                     <Stack.Screen name='Search' component={Search} options={{
                       headerShown: true,
                       title: "Tìm kiếm"
+                    }} />
+                    <Stack.Screen name='Qrscanner' component={Qrscanner} />
+                    <Stack.Screen name='Partner' component={Partner} options={{
+                      headerShown: true,
                     }} />
                     <Stack.Screen name='NewContact' component={NewContact} options={{
                       headerShown: true,

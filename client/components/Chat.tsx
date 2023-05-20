@@ -1,6 +1,7 @@
 import { FlatList, View } from "react-native"
 import ChatItem, { BubbleChat, ChatItemKind, ChatItemProps } from "./ChatItem"
 import { useEffect, useState } from "react"
+import { compareAsc, compareDesc, parseISO } from "date-fns"
 
 export enum ConversationState {
     sending,
@@ -8,6 +9,7 @@ export enum ConversationState {
     received,
     seen,
     unknown,
+    error
 }
 
 export type ChatProps = {
@@ -43,10 +45,12 @@ export default function Chat({
             <FlatList
                 inverted
                 // showsVerticalScrollIndicator={false}
-                data={items}
-                ListHeaderComponent={
-                    partnerIsTyping !== undefined ? <ChatItem kind={ChatItemKind.typing} data={partnerIsTyping} /> : undefined
-                }
+                data={items.sort((a, b) => {
+                    return compareDesc(parseISO(a.data.sentAt), parseISO(b.data.sentAt))
+                })}
+                // ListHeaderComponent={
+                //     partnerIsTyping !== undefined ? <ChatItem kind={ChatItemKind.typing} data={partnerIsTyping} /> : undefined
+                // }
                 renderItem={({ item, index, separators }) => {
 
                     if (item.kind === ChatItemKind.bubble) {

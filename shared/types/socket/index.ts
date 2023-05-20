@@ -5,8 +5,9 @@ export interface ServerToClientEvents {
     requireBundle: (requirement: BundleRequirement) => void,
     logged: (info: LoggedInfo) => void,
     sessionInfo: (sessionInfo: SessionInfo) => void
-    inComingMessage: (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
+    // inComingMessage: (sender: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
     // sendMailbox:  (messages: Array<Server.Mail> , callback: (inComingMessageResult: SocketEvent.InComingMessageResult) => void) => void
+    newMessage: () => void
 }
 
 export interface ClientToServerEvents {
@@ -19,8 +20,9 @@ export interface ClientToServerEvents {
     getDeviceId: (callback: (deviceId: number | Error) => void) => void
     getPreKeyBundle: (address: Signal.Types.SignalProtocolAddress, callback: (preKeyBundle: Signal.Types.PreKeyBundle) => void) => void,
     logout: () => void
-    outGoingMessage: (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (outGoingMessageResult: SocketEvent.OutGoingMessageResult) => void) => void
-    outGoingMessageV2: (sender: Signal.Types.SignalProtocolAddress, mails: Array<Server.MessagePackage>, callback: (success: boolean) => void) => void
+    // outGoingMessage: (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message, callback: (outGoingMessageResult: SocketEvent.OutGoingMessageResult) => void) => void
+    outGoingMessage: (sender: Signal.Types.SignalProtocolAddress, mails: Array<Server.MessagePackage>, callback: (success: boolean) => void) => void
+    deleteMail: (mailId: string) => void
     getAddresses: (e164: string, callback: (addresses: Array<Signal.Types.SignalProtocolAddress>) => void) => void
 }
 

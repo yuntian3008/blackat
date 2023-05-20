@@ -3,6 +3,8 @@ apply plugin: "com.facebook.react"
 
 import com.android.build.OutputFile
 
+
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -89,6 +91,8 @@ def reactNativeArchitectures() {
 }
 
 android {
+
+
     ndkVersion rootProject.ext.ndkVersion
 
     compileSdkVersion rootProject.ext.compileSdkVersion
@@ -104,8 +108,8 @@ android {
         applicationId "com.blackat.chat"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "0.0003.alpha"
+        versionCode 4
+        versionName "0.0004.alpha"
     }
 
     splits {
@@ -140,6 +144,10 @@ android {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.release
+//            firebaseCrashlytics {
+//                nativeSymbolUploadEnabled true
+//                unstrippedNativeLibsDir 'build/intermediates/merged_native_libs/release/out/lib'
+//            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
@@ -160,13 +168,23 @@ android {
 
         }
     }
+
+    buildFeatures {
+        viewBinding = true
+    }
 }
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
+//apply plugin: 'kotlin-android-extensions'
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+//    implementation 'com.facebook.fresco:fresco:3.0.0'
+    implementation 'com.facebook.fresco:animated-gif:2.5.0'
+    implementation 'com.facebook.fresco:animated-webp:2.5.0'
+    implementation 'com.facebook.fresco:webpsupport:2.5.0'
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation 'androidx.core:core-ktx:1.10.0'
@@ -208,6 +226,7 @@ dependencies {
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
 apply plugin: 'org.jetbrains.kotlin.android'; applyNativeModulesAppBuildGradle(project)
 apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
 apply plugin: 'io.realm.kotlin'
 

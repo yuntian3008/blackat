@@ -14,9 +14,12 @@ import com.blackat.chat.signal.crypto.PreKeyUtil
 import com.blackat.chat.utils.*
 import com.blackat.chat.utils.Base64
 import com.facebook.react.bridge.*
+import com.th3rdwave.safeareacontext.getFrame
 import kotlinx.coroutines.*
 import org.signal.libsignal.protocol.*
 import org.signal.libsignal.protocol.ecc.ECPublicKey
+import org.signal.libsignal.protocol.fingerprint.Fingerprint
+import org.signal.libsignal.protocol.fingerprint.NumericFingerprintGenerator
 import org.signal.libsignal.protocol.message.PreKeySignalMessage
 import org.signal.libsignal.protocol.message.SignalMessage
 import org.signal.libsignal.protocol.state.PreKeyBundle
@@ -213,9 +216,18 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                     val byteArray = outputStream.toByteArray()
 
-                    return@withContext encrypt(address, byteArray)
+                    val startTime = System.currentTimeMillis()
+
+                    val encrypted = encrypt(address, byteArray)
+
+                    val endTime = System.currentTimeMillis()
+                    val elapsedTime = endTime - startTime
+                    Log.d("DebugV6","THỜI GIAN MÃ HÓA: $elapsedTime milliseconds")
+                    return@withContext encrypted
 
                 }
+                val cipherMessage = ReadableMapUtils.getCipherMessage(response)
+                Log.d("DebugV5", "MÃ HÓA THÀNH CÔNG FILE [${uri}] => [${cipherMessage.cipher}]")
                 promise.resolve(response)
             } catch (e: Exception) {
                 promise.reject(e)
@@ -231,9 +243,18 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
-                    return@withContext encrypt(address, data.toByteArray())
+                    val startTime = System.currentTimeMillis()
+
+                    val encrypted = encrypt(address, data.toByteArray())
+
+                    val endTime = System.currentTimeMillis()
+                    val elapsedTime = endTime - startTime
+                    Log.d("DebugV6","THỜI GIAN MÃ HÓA: $elapsedTime milliseconds")
+                    return@withContext encrypted
 
                 }
+                val cipherMessage = ReadableMapUtils.getCipherMessage(response)
+                Log.d("DebugV5", "MÃ HÓA THÀNH CÔNG [${data}] => [${cipherMessage.cipher}]")
                 promise.resolve(response)
             } catch (e: Exception) {
                 promise.reject(e)
@@ -343,6 +364,9 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 sessionCipher.decrypt(inComingMessage)
             }
 
+            AppRepository.partner().upsert(sender.name, sender.deviceId)
+
+
             return plaintextByteArray
         } catch (e: Exception) {
             val error = Arguments.createMap()
@@ -368,10 +392,16 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     if (reactApplicationContext == null)
                         throw Exception("context null")
 
+                    val startTime = System.currentTimeMillis()
+
                     val result = decrypt(address,cipher,forcePreKey)
+                    val endTime = System.currentTimeMillis()
+                    val elapsedTime = endTime - startTime
+                    Log.d("DebugV6","THỜI GIAN GIẢI MÃ: $elapsedTime milliseconds")
                     if (result is ByteArray) {
                         val plaintext = String(result)
-                        Log.d("DebugV3", "GIẢI MÃ THÀNH CÔNG [${plaintext}]")
+                        val cipherMessage = ReadableMapUtils.getCipherMessage(cipher)
+                        Log.d("DebugV5", "GIẢI MÃ THÀNH CÔNG [${cipherMessage.cipher}] => [${plaintext}]")
                         return@withContext plaintext
                     }
 
@@ -452,11 +482,17 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                         throw Exception("context null")
 
                     Log.d("DebugV3", "Chuẩn bị giải mã file")
+                    val cipherMessage = ReadableMapUtils.getCipherMessage(cipher)
+                    val startTime = System.currentTimeMillis()
+
                     val result = decrypt(address,cipher,forcePreKey)
-                    Log.d("DebugV3", "Chuẩn bị giải mã hoàn tất")
+                    val endTime = System.currentTimeMillis()
+                    val elapsedTime = endTime - startTime
+                    Log.d("DebugV6","THỜI GIAN GIẢI MÃ: $elapsedTime milliseconds")
                     if (result is ByteArray) {
                         val file = ReadableMapUtils.getFileInfo(fileInfo)
                         Log.d("DebugV3", "Chuẩn bị ghi file")
+                        Log.d("DebugV5", "GIẢI MÃ THÀNH CÔNG FILE [${cipherMessage.cipher}] => [SIZE=${file.fileSize}]")
                         return@withContext writeFile(result,file.fileName, file.fileType)
                     }
 
@@ -467,6 +503,84 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 promise.resolve(response)
             } catch (e: Exception) {
                 Log.e("DebugV3", e.message ?: "")
+            }
+        }
+    }
+
+    private suspend fun getFingerprint(e164: String): Fingerprint? {
+        val partner = AppRepository.partner().getByE164(e164)
+        val result = partner?.let {
+            if (partner.deviceId == 0) return null
+            val localStableId = SignalRepository.account().getE164()!!.toByteArray()
+            val remoteStableId = partner.e164.toByteArray()
+            val localIdentityKey = SignalRepository.signalStore().identityKeyPair.publicKey
+            val remoteIdentityKey = SignalRepository.signalIdentityKey().getIdentity(
+                    SignalProtocolAddress(
+                            partner.e164, partner.deviceId
+                    )
+            )
+            val fingerprintGenerator = NumericFingerprintGenerator(5200)
+            fingerprintGenerator.createFor(
+                    1,
+                    localStableId,
+                    localIdentityKey,
+                    remoteStableId,
+                    remoteIdentityKey
+            )
+        }
+        return result
+    }
+
+    @ReactMethod
+    fun compareFingerprint(qr: String, e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val result = getFingerprint(e164)?.let {    fingerprint ->
+                        val scannableFingerprint = Base64.decode(qr)
+                        fingerprint.scannableFingerprint.compareTo(scannableFingerprint)
+                    } ?: throw Exception("cannot-get-fingerprint")
+
+                    return@withContext result
+
+                }
+
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("fingerprint", e.stackTraceToString())
+            }
+        }
+    }
+
+    @ReactMethod
+    fun requireFingerprint(e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val result = getFingerprint(e164)?.let { fingerprint ->
+                        val qr = Base64.encodeBytes(fingerprint.scannableFingerprint.serialized)
+                        val displayText = fingerprint.displayableFingerprint.displayText
+                        val result = Arguments.createMap()
+                        result.putString("qrContent",qr)
+                        result.putString("displayText",displayText)
+                        result
+                    } ?: throw Exception("cannot-get-fingerprint")
+
+                    return@withContext result
+
+                }
+
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("fingerprint", e.stackTraceToString())
             }
         }
     }

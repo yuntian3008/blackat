@@ -26,9 +26,9 @@ function Home({ navigation, route }: HomeProps): JSX.Element {
             <Tab.Screen name="Conversation" component={Conversation} options={{
                 title: "Cuộc trò chuyện"
             }} />
-            <Tab.Screen name="Contact" component={Contact} options={{
+            {/* <Tab.Screen name="Contact" component={Contact} options={{
                 title: "Liên hệ"
-            }} />
+            }} /> */}
         </Tab.Navigator>
 
     )

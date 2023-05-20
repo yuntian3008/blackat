@@ -41,6 +41,9 @@ export type KeyBundle = {
 }
 
 export namespace SocketEvent {
+    export namespace V2 {
+        export type OutGoingMessageCallback = string
+    }
     export namespace SendAt {
         export const FAILED = -1
         export const DEVICE = 0
@@ -58,6 +61,7 @@ export namespace App {
     export namespace MessageType {
         export const TEXT = 0
         export const IMAGE = 1
+        export const STICKER = 2
         export const EMPTY = -1
     }
     export namespace MessageOwner {
@@ -67,10 +71,25 @@ export namespace App {
     export namespace MessageState {
         export const SENT = "SENT"
         export const SENDING = "SENDING"
-        export const RECEIVED = "RECEIVED"
         export const UNKNOWN = "UNKNOWN"
+        export const READ = "READ"
+        export const UNREAD = "UNREAD"
     }
     export namespace Types {
+        export type DialogData = {
+            icon: string,
+            title: string,
+            content: string,
+            cancel?: () => void,
+            ok?: () => void,
+        }
+        export type Partner = {
+            id: number,
+            e164: string,
+            name?: string,
+            deviceId: number,
+            avatar?: string,
+        }
         export type Conversation = {
             id: number,
             e164: string,
@@ -80,6 +99,7 @@ export namespace App {
             data: string,
             type: number,
             timestamp: string,
+            state?: string,
         }
         export type Message = {
             id: number,
@@ -117,6 +137,7 @@ export namespace Server {
         timestamp: string,
     }
     export type Mail = {
+        id: string,
         sender: Signal.Types.SignalProtocolAddress,
         message: Message
     }
@@ -133,6 +154,10 @@ export interface SignalError {
 
 export namespace Signal {
     export namespace Types {
+        export type Fingerprint = {
+            qrContent: string,
+            displayText: string,
+        }
         export type SignalProtocolAddress = {
             e164: string,
             deviceId: number

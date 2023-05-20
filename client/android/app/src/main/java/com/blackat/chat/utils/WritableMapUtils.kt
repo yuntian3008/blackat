@@ -2,6 +2,7 @@ package com.blackat.chat.utils
 
 import com.blackat.chat.data.model.FileInfo
 import com.blackat.chat.data.model.Message
+import com.blackat.chat.data.model.Partner
 import com.blackat.chat.data.model.PrivateConversation
 import com.blackat.chat.data.model.PrivateConversationWithMessages
 import com.blackat.chat.data.model.PrivateMessage
@@ -37,6 +38,7 @@ class WritableMapUtils {
             writableMapMessage.putString("data", privateMessage.message.data)
             writableMapMessage.putInt("type",privateMessage.message.type)
             writableMapMessage.putString("timestamp", privateMessage.message.timestamp)
+            writableMapMessage.putString("state",privateMessage.message.state.name)
 
             val writableMap = WritableNativeMap()
             writableMap.putInt("conversationId",privateMessage.privateConversationId)
@@ -73,6 +75,16 @@ class WritableMapUtils {
             writableMap.putString("data",map.data)
             writableMap.putString("timestamp",map.timestamp)
             writableMap.putInt("type", map.type)
+            return writableMap
+        }
+
+        fun getPartner(map: Partner): WritableMap {
+            val writableMap = Arguments.createMap()
+            writableMap.putInt("id",map.id!!)
+            writableMap.putString("e164",map.e164)
+            writableMap.putString("name",map.name)
+            writableMap.putString("avatar", map.avatar)
+            writableMap.putInt("deviceId", map.deviceId)
             return writableMap
         }
 

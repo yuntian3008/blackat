@@ -11,8 +11,20 @@ class PrivateMessageStore(
         store.insert(PrivateMessage(message,conversationId))
     }
 
+    suspend fun remove(conversationId: Int) {
+        store.delete(conversationId)
+    }
+
     suspend fun getMessageWithE164List(): List<MessageWithE164> {
         return store.getMessagesWithState(MessageState.SENDING)
+    }
+
+    suspend fun markAllPartnerMessageAsRead(conversationId: Int) {
+        return store.changeStateFromState(MessageState.READ,MessageState.UNREAD, conversationId)
+    }
+
+    suspend fun markAllPartnerMessageAsUnread(conversationId: Int) {
+        return store.changeStateFromState(MessageState.UNREAD,MessageState.READ, conversationId)
     }
 
     suspend fun markAsSent(id: Int) {

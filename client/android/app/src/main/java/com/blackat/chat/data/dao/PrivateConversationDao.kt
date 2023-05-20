@@ -41,4 +41,7 @@ interface PrivateConversationDao {
 
     @Query("DELETE FROM private_conversation")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM private_conversation WHERE e164 = :e164")
+    suspend fun delete(e164: String)
 }

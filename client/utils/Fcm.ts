@@ -21,13 +21,16 @@ export const updateChat = async (notification: Notification, input: string) => {
     const localAddress = await SignalModule.requireLocalAddress()
 
     socket.connect()
-    const result = await encryptAndSendMessage(localAddress, e164, {
+    let messageState = App.MessageState.SENDING
+    const messageData: App.Types.MessageData = {
         data: input,
         owner: App.MessageOwner.SELF,
         timestamp: formatISO(new Date()),
         type: App.MessageType.TEXT
-    })
-    if (result)
+    }
+    const result = await encryptAndSendMessage(localAddress, e164, messageData )
+    if (result) {
+        messageState = App.MessageState.SENT
         notifee.displayNotification({
             id: notification.id,
             title: e164,
@@ -46,7 +49,8 @@ export const updateChat = async (notification: Notification, input: string) => {
             // body: plainText.type == App.MessageType.TEXT ?
             //     `<b>${data.address.e164}:</b> ${plainText.data}` : undefined
         })
-
+    }
+    await saveMessageToLocal(e164, messageData, messageState)
 }
 
 export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMessage) => {
@@ -76,7 +80,7 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
             try {
                 const decrypted = await receiveAndDecryptMessage(data.address, data.message)
                 if (decrypted === null) return;
-                saveMessageToLocal(data.address.e164, decrypted!, App.MessageState.UNKNOWN)
+                saveMessageToLocal(data.address.e164, decrypted!, App.MessageState.UNREAD)
                 decryptedData = decrypted
             } catch (e) {
                 console.log('Error -> New text message notification')
@@ -117,6 +121,8 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
     }
 
     if (data.type === App.MessageType.IMAGE) messageDisplay = "đã gửi 1 ảnh"
+
+    if (data.type === App.MessageType.STICKER) messageDisplay = "đã gửi 1 nhãn dán"
 
     const conversation: Array<string> = [
         `${messageDisplay}`

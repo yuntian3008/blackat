@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class MessageState {
-    SENT,SENDING,RECEIVED,UNKNOWN
+    SENT,SENDING,RECEIVED,UNKNOWN,READ,UNREAD
 }
 
 data class FileInfo(

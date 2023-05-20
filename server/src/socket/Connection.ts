@@ -5,8 +5,9 @@ import { Server, SessionInfo, Signal, SocketEvent } from "../../../shared/types"
 import User from "../db/model/User";
 import Key from "../db/model/Key";
 import { clients } from "../server";
-import Mailbox from "../db/model/Mailbox";
 import { sendNotificationMessage } from "../firebase/messaging";
+import Mail from "../db/model/Mail";
+import { Types } from "mongoose";
 
 const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, message: Server.MessagePackage) => {
     const deviceId = await Device.getId(message.address.e164, message.address.deviceId)
@@ -18,7 +19,7 @@ const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, mess
     }
 
     if (device.fcmToken) {
-        sendNotificationMessage([device.fcmToken],{
+        sendNotificationMessage([device.fcmToken], {
             message: JSON.stringify(receiverPackage),
             // android: {
             //     channelId: 'messages',
@@ -30,27 +31,46 @@ const sendNotification = async (sender: Signal.Types.SignalProtocolAddress, mess
             //         }
             //     ]
             // }
-            
+
         })
-    }   
-    
+    }
+
 }
 
-const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> =>
+// const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<void> =>
+//     new Promise((resolve, reject) => {
+//         Device.getId(address.e164, address.deviceId)
+//             .then((device) => {
+//                 Mailbox.add(device, {
+//                     sender: sender,
+//                     message: message
+//                 }).then((mailbox) => {
+//                     if (mailbox) {
+//                         sendNotification(sender, {
+//                             address, message
+//                         })
+//                         resolve()
+//                     }
+//                     else reject(new Error("Mailbox failed to create a mail")) 
+//                 }).catch((err) => {
+//                     console.log(err)
+//                     reject(err)
+//                 })
+//             }).catch((err) => {
+//                 console.log(err)
+//                 reject(err)
+//             })
+//     })
+
+const saveMessage = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<string> =>
     new Promise((resolve, reject) => {
         Device.getId(address.e164, address.deviceId)
             .then((device) => {
-                Mailbox.add(device._id, {
-                    sender: sender,
+                Mail.add(device, {
+                    address: sender,
                     message: message
-                }).then((mailbox) => {
-                    if (mailbox) {
-                        sendNotification(sender, {
-                            address, message
-                        })
-                        resolve()
-                    }
-                    else reject(new Error("Mailbox failed to create a mail")) 
+                }).then((mailId) => {
+                    resolve(mailId)
                 }).catch((err) => {
                     console.log(err)
                     reject(err)
@@ -61,29 +81,29 @@ const offlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Sign
             })
     })
 
-const onlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> =>
-    new Promise((resolve, reject) => {
-        clients.get(JSON.stringify(address)).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
-            if (err) {
-                offlineHandle(sender, address, message).then(() => {
-                    resolve({
-                        sentAt: SocketEvent.SendAt.MAILBOX
-                    })
-                }).catch((e) => {
-                    reject(e)
-                })
-            } else {
-                if(inComingMessageResult.isProcessed) {
-                    resolve({
-                        sentAt: SocketEvent.SendAt.DEVICE
-                    })
-                }
-                reject(new Error("Receiver failed to process"))
-                
-            }
+// const onlineHandle = (sender: Signal.Types.SignalProtocolAddress, address: Signal.Types.SignalProtocolAddress, message: Server.Message): Promise<SocketEvent.OutGoingMessageResult> =>
+//     new Promise((resolve, reject) => {
+//         clients.get(JSON.stringify(address)).timeout(20000).emit('inComingMessage', sender, message, (err, inComingMessageResult) => {
+//             if (err) {
+//                 offlineHandle(sender, address, message).then(() => {
+//                     resolve({
+//                         sentAt: SocketEvent.SendAt.MAILBOX
+//                     })
+//                 }).catch((e) => {
+//                     reject(e)
+//                 })
+//             } else {
+//                 if(inComingMessageResult.isProcessed) {
+//                     resolve({
+//                         sentAt: SocketEvent.SendAt.DEVICE
+//                     })
+//                 }
+//                 reject(new Error("Receiver failed to process"))
 
-        })
-    })
+//             }
+
+//         })
+//     })
 
 export default function Connection(socket: ServerSocket) {
 
@@ -101,15 +121,16 @@ export default function Connection(socket: ServerSocket) {
     })
 
     socket.on('checkMailbox', (callback) => {
-        Mailbox.getAll(socket.data.deviceObjectId).then((v) => {
+        Mail.getAll(socket.data.deviceObjectId).then((v) => {
             callback(v)
-            if (v.length > 0) {
-                Mailbox.clearAll(socket.data.deviceObjectId)
-            }
         }).catch((e) => {
             console.log("[CHECK MAIL]")
             console.log(e)
         })
+    })
+
+    socket.on('deleteMail', (mailId) => {
+        Mail.remove(new Types.ObjectId(mailId))
     })
 
 
@@ -182,16 +203,16 @@ export default function Connection(socket: ServerSocket) {
         try {
             for (let pack of messages) {
                 console.log(`[${sender.e164},${sender.deviceId}] => [${pack.address.e164},${pack.address.deviceId}]`)
-                
+                await saveMessage(sender, pack.address, pack.message)
                 if (clients.has(JSON.stringify(pack.address))) {
                     console.log(`[ONLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
-                    // console.log('[]' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
-                    const result = await onlineHandle(sender,pack.address,pack.message)
+                    // const result = await onlineHandle(sender,pack.address,pack.message)
+                    clients.get(JSON.stringify(pack.address)).emit('newMessage')
                 } else {
                     console.log(`[OFFLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
-                    await offlineHandle(sender, pack.address, pack.message)
+                    // await offlineHandle(sender, pack.address, pack.message)
                 }
-                
+
             }
             return true
         }
@@ -200,44 +221,44 @@ export default function Connection(socket: ServerSocket) {
             console.log(err)
             return false
         }
-        
+
     }
 
 
 
-    socket.on('outGoingMessageV2', (sender, messages, callback) => {
+    socket.on('outGoingMessage', (sender, messages, callback) => {
         // console.log(sender)
         // console.log(messages.size)
         // const map = new Map<Signal.Types.SignalProtocolAddress, Server.Message>(JSON.parse(messages))
-        outGoingMessageV2(sender,messages).then((success) => {
+        outGoingMessageV2(sender, messages).then((success) => {
             callback(success)
         })
     })
 
-    socket.on('outGoingMessage', (sender, address, message, callback) => {
-        // console.log([...clients.entries()])
-        console.log("Có tin nhắn loại " + message.type)
-        if (clients.has(JSON.stringify(address))) {
-            console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
-            onlineHandle(sender,address,message).then((v) => {
-                callback(v)
-            }).catch(() => {
-                callback({
-                    sentAt: SocketEvent.SendAt.FAILED
-                })
-            })
-        } else {
-            offlineHandle(sender, address, message).then(() => {
-                callback({
-                    sentAt: SocketEvent.SendAt.MAILBOX
-                })
-            }).catch(() => {
-                callback({
-                    sentAt: SocketEvent.SendAt.FAILED
-                })
-            })
-        }
-    })
+    // socket.on('outGoingMessage', (sender, address, message, callback) => {
+    //     // console.log([...clients.entries()])
+    //     console.log("Có tin nhắn loại " + message.type)
+    //     if (clients.has(JSON.stringify(address))) {
+    //         console.log('tin nhắn từ ' + sender.e164 + ' gửi đến ' + address.e164 + ' đang trực tuyến [CIPHERTYPE: ' + message.data.type + ']')
+    //         onlineHandle(sender,address,message).then((v) => {
+    //             callback(v)
+    //         }).catch(() => {
+    //             callback({
+    //                 sentAt: SocketEvent.SendAt.FAILED
+    //             })
+    //         })
+    //     } else {
+    //         offlineHandle(sender, address, message).then(() => {
+    //             callback({
+    //                 sentAt: SocketEvent.SendAt.MAILBOX
+    //             })
+    //         }).catch(() => {
+    //             callback({
+    //                 sentAt: SocketEvent.SendAt.FAILED
+    //             })
+    //         })
+    //     }
+    // })
 
     // socket.on('getBundle', (registrationId,deviceId,preKey,signedPreKey,identityKey) => {
     //     const preKeyBuffer = Buffer.from(preKey,'base64')

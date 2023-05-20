@@ -26,6 +26,9 @@ interface SignalModuleInterface {
     missingSession(addresses: Array<Signal.Types.SignalProtocolAddress>): Promise<Array<Signal.Types.SignalProtocolAddress>>
     requireLocalAddress(): Promise<Signal.Types.SignalProtocolAddress>
 
+    requireFingerprint(e164: string): Promise<Signal.Types.Fingerprint>
+    compareFingerprint(qrContent: string, e164: string): Promise<boolean>
+
     // test
     writeFile(path: string): Promise<string>
 }

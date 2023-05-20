@@ -7,7 +7,7 @@ import androidx.room.*
 ])
 data class PrivateConversation(
         val e164: String,
-
+        val partnerId: Int,
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Int? = null
