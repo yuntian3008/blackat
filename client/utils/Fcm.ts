@@ -59,7 +59,7 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
     //     name: "Cuộc trò chuyện",
     //     description: "Thông báo cuộc trò chuyện",
     // })
-    // if (socket.connected) return
+    if (socket.connected) return
 
     notifee.createChannel({
         id: 'inComingMessage',

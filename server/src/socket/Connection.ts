@@ -210,7 +210,7 @@ export default function Connection(socket: ServerSocket) {
                     clients.get(JSON.stringify(pack.address)).emit('newMessage')
                 } else {
                     console.log(`[OFFLINE][TYPE:${pack.message.type}][CIPHER:${pack.message.data.type}]`)
-                    // await offlineHandle(sender, pack.address, pack.message)
+                    sendNotification(sender, pack)
                 }
 
             }

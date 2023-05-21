@@ -9,7 +9,6 @@ import { ScrollView } from "react-native";
 import { formatISO } from "date-fns";
 import { faker } from '@faker-js/faker';
 import { App, Server, Signal, SocketEvent } from "../../../shared/types";
-import socket, { getAddresses, getPreKeyBundle, outGoingMessage } from "../../utils/socket";
 import SignalModule from "../../native/android/SignalModule";
 import { el, ms } from "date-fns/locale";
 import AppModule from "../../native/android/AppModule";

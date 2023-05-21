@@ -7,13 +7,24 @@ export const sendNotificationMessage = async (tokens: Array<string>, data: {
 }) => {
   
     // Send a message to devices with the registered tokens
-    await messaging().sendMulticast({
+    await messaging().sendToDevice(
       tokens,
-      data: {
-        ...data
+      {
+        data: {
+          ...data
+        },
       },
-      android: {
-        priority: 'high',
+      {
+        priority: 'high'
       }
-    });
+    )
+    // await messaging().sendMulticast({
+    //   tokens,
+    //   data: {
+    //     ...data
+    //   },
+    //   android: {
+    //     priority: 'high',
+    //   },
+    // });
   }

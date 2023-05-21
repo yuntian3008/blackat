@@ -43,7 +43,7 @@ import Search from './screens/search';
 import Header, { HeaderItems, MenuItems } from './components/Header';
 import NewContact from './screens/newcontact';
 import ChatZone from './screens/chatzone';
-import socket, { outGoingMessage } from './utils/socket';
+import socket from './utils/socket';
 import DeviceInfo from 'react-native-device-info';
 import { App as AppTypes, BundleRequirement, LoggedInfo, Server, Signal, SocketEvent, SignalError } from '../shared/types';
 import SignalModule from './native/android/SignalModule';
