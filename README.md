@@ -1,4 +1,4 @@
-# Blackat - End-to-End Encryption Messaging App
+# Blackat - End-to-End Encryption Messaging System
 
 ![Blackat Logo](https://raw.githubusercontent.com/thiensgith/blackat/main/client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
 
