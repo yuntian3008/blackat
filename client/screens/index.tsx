@@ -22,3 +22,9 @@ export type ChatZoneProps = StackScreenProps<RootStackParamList, 'ChatZone'>;
 
 export type ImageViewProps = StackScreenProps<RootStackParamList, 'ImageView'>;
 export type QrscannerProps = StackScreenProps<RootStackParamList, 'Qrscanner'>;
+
+export type SettingProps = StackScreenProps<RootStackParamList, 'Setting'>;
+export type AccountProps = StackScreenProps<RootStackParamList, 'Account'>;
+export type ProfileProps = StackScreenProps<RootStackParamList, 'Profile'>;
+
+export type ChatSettingProps = StackScreenProps<RootStackParamList, 'ChatSetting'>;

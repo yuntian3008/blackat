@@ -1,7 +1,8 @@
 import { Spinner } from "@ui-kitten/components";
 import { View } from "react-native";
 import Logo from "./Logo";
-import { Text } from "react-native-paper";
+import { Text, useTheme } from "react-native-paper";
+import { AppTheme } from "../theme";
 
 export const LoadingIndicator = (props: any) =>
     <View style={[props.style, {
@@ -14,6 +15,7 @@ export const LoadingIndicator = (props: any) =>
     </View>
 
 export const LoadingOverlay = (): JSX.Element => {
+    const theme = useTheme<AppTheme>()
     return (
         <View style={{
             position: 'absolute',
@@ -24,7 +26,7 @@ export const LoadingOverlay = (): JSX.Element => {
             bottom: 0,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#F5FCFF88",
+            backgroundColor: theme.colors.background
         }}>
             <Logo isLoop />
         </View>

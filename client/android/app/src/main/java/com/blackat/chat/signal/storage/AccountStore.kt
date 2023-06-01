@@ -18,6 +18,11 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         private const val LOCAL_DEVICE_ID = "account.local_device_id"
         private const val REGISTRATION_ID: String = "account.registration_id"
 
+        private const val PIN_CODE: String = "account.pin_code"
+
+        private const val PROFILE_NAME: String = "account.profile_name"
+        private const val PROFILE_AVATAR: String = "account.profile_avatar"
+
         private const val KEY_IDENTITY_PUBLIC_KEY = "account.identity_public_key"
         private const val KEY_IDENTITY_PRIVATE_KEY = "account.identity_private_key"
 
@@ -67,6 +72,43 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
     suspend fun getE164(): String? {
         return getString(E164,null)
     }
+
+    suspend fun setPin(value: String) {
+        putString(PIN_CODE, value)
+    }
+
+    suspend fun resetPin() {
+        remove(PIN_CODE)
+    }
+
+    suspend fun getPin(): String? {
+        return getString(PIN_CODE,null)
+    }
+
+    suspend fun setProfileName(value: String) {
+        putString(PROFILE_NAME, value)
+    }
+
+    suspend fun resetProfileName() {
+        remove(PROFILE_NAME)
+    }
+
+    suspend fun getProfileName(): String? {
+        return getString(PROFILE_NAME,null)
+    }
+
+    suspend fun setProfileAvatar(value: String) {
+        putString(PROFILE_AVATAR, value)
+    }
+
+    suspend fun resetProfileAvatar() {
+        remove(PROFILE_AVATAR)
+    }
+
+    suspend fun getProfileAvatar(): String? {
+        return getString(PROFILE_AVATAR,null)
+    }
+
 
     suspend fun setLocalDeviceId(value: Int) {
         if (!contain(LOCAL_DEVICE_ID)) {

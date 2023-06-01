@@ -21,6 +21,8 @@ class WritableMapUtils {
             val writableMap = WritableNativeMap()
             writableMap.putInt("id",privateConversation.id!!)
             writableMap.putString("e164", privateConversation.e164)
+            writableMap.putBoolean("enablePinSecurity", privateConversation.enablePinSecurity)
+            writableMap.putBoolean("allowNotification", privateConversation.allowNotification)
             return  writableMap
         }
 
@@ -38,6 +40,7 @@ class WritableMapUtils {
             writableMapMessage.putString("data", privateMessage.message.data)
             writableMapMessage.putInt("type",privateMessage.message.type)
             writableMapMessage.putString("timestamp", privateMessage.message.timestamp)
+            writableMapMessage.putInt("senderDevice", privateMessage.message.senderDevice)
             writableMapMessage.putString("state",privateMessage.message.state.name)
 
             val writableMap = WritableNativeMap()
@@ -58,6 +61,7 @@ class WritableMapUtils {
             val writableMap = WritableNativeMap()
             writableMap.putArray("messages", privateMessageArray)
             writableMap.putString("state",last.message.state.name)
+            writableMap.putMap("partner", getPartner(privateConversationWithMessages.partner))
             writableMap.putMap("conversation", getPrivateConversation(privateConversationWithMessages.conversation))
             return  writableMap
         }
@@ -85,6 +89,7 @@ class WritableMapUtils {
             writableMap.putString("name",map.name)
             writableMap.putString("avatar", map.avatar)
             writableMap.putInt("deviceId", map.deviceId)
+            writableMap.putString("nickname", map.nickname)
             return writableMap
         }
 

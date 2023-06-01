@@ -8,7 +8,6 @@ import { useDispatch } from "react-redux";
 import { dequeueTopToast } from "../redux/TopToast";
 import { AppTheme } from "../theme";
 import { ScrollView } from "react-native-gesture-handler";
-import FastImage from 'react-native-fast-image'
 
 export interface StickerPickerListener {
     onStickerWillShow: () => void,

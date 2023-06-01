@@ -141,7 +141,7 @@ export function ChatController({
                     iconColor={theme.colors.tertiary}
                     containerColor={theme.colors.tertiaryContainer}
                     size={28}
-                    onPress={messageText.length > 0 ? () => {
+                    onPress={messageText.trim().length > 0 ? () => {
                         onSendPress(messageText)
                         setMessageText("")
                      } : () => ToastAndroid.show("Sắp ra mắt", ToastAndroid.SHORT)}

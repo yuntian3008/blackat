@@ -20,6 +20,22 @@ class PartnerStore(
         return store.getByE164(e164)
     }
 
+    suspend fun changeNickname(e164: String, nickname: String?) {
+        return store.changeNickname(e164, nickname)
+    }
+
+    suspend fun upsert(newPartner: Partner) {
+        val partner = store.getByE164(newPartner.e164)
+        partner?.let { oldPartner ->
+            oldPartner.deviceId = newPartner.deviceId
+            newPartner.name?.let {
+                oldPartner.name = it }
+            newPartner.avatar?.let {
+                oldPartner.avatar = it }
+            store.update(oldPartner)
+        } ?: store.insert(newPartner)
+    }
+
 
 //    suspend fun getMessageWithE164List(): List<MessageWithE164> {
 //        return store.getMessagesWithState(MessageState.SENDING)

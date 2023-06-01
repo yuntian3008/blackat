@@ -20,4 +20,5 @@ data class Partner(
 
     var name: String? = null
     var avatar: String? = null
+    var nickname: String?= null
 }

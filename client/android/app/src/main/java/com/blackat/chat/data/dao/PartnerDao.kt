@@ -19,9 +19,10 @@ interface PartnerDao {
     @Update
     suspend fun update(partner: Partner)
 
+
     @Query("UPDATE partner SET " +
-            "deviceId = :deviceId")
-    suspend fun setDeviceId(deviceId: Int)
+            "nickname = :nickname WHERE e164 = :e164")
+    suspend fun changeNickname(e164: String, nickname: String?)
 
     @Query("SELECT EXISTS (SELECT * FROM partner WHERE e164 = :e164)")
     suspend fun contain(e164: String): Boolean

@@ -19,7 +19,8 @@ class ReadableMapUtils {
                     map.getString("owner")!!,
                     map.getString("data")!!,
                     map.getInt("type"),
-                    map.getString("timestamp")!!
+                    map.getString("timestamp")!!,
+                    map.getInt("senderDevice"),
             )
         }
 

@@ -7,6 +7,7 @@ import AppModule from "../native/android/AppModule";
 import { Alert, AppState, BackHandler, ToastAndroid } from "react-native";
 import notifee from "@notifee/react-native"
 import { pushInComingMessageNotification } from "./Fcm";
+import { getProfileData, savePartnerProfile } from "./Setting";
 
 // ===================== ONLINE HANDLE
 
@@ -111,14 +112,23 @@ export const getAddresses = async (e164: string): Promise<Array<Signal.Types.Sig
 
 const syncSession = async function (e164: string) {
     const addresses = await getAddresses(e164)
+    console.log(addresses)
     const missingSession = await SignalModule.missingSession(addresses)
+    console.log(missingSession)
+
     for (let index = 0; index < missingSession.length; index++) {
-        const missing = missingSession[index];
-        const preKeyBundle = await getPreKeyBundle(missing)
-        const perform = await SignalModule.performKeyBundle(e164, preKeyBundle)
-        console.log("performKeyBundle[" + preKeyBundle.deviceId + "]: " + perform)
-        if (!perform) console.log(preKeyBundle)
+        try {
+            const missing = missingSession[index];
+            const preKeyBundle = await getPreKeyBundle(missing)
+            const perform = await SignalModule.performKeyBundle(e164, preKeyBundle)
+            console.log("performKeyBundle[" + preKeyBundle.deviceId + "]: " + perform)
+            if (!perform) console.log(preKeyBundle)
+        } catch (e) {
+            Log(e)
+        }
     }
+
+
     return addresses
 }
 
@@ -138,7 +148,9 @@ const syncSession = async function (e164: string) {
 //             })
 //         }
 
-//     })
+//     }
+
+
 
 export const onNewMessage = () => {
     mailboxHandler()
@@ -172,8 +184,11 @@ export const inComingMessage = async (sender: Signal.Types.SignalProtocolAddress
         }
     }
     catch (e) {
-        console.log("Bắt đc nè")
-        console.log(e)
+        SignalModule.getProfile().then((profile) => {
+            console.log(`${profile.e164} lỗi tin nhắn đến:`)
+            console.log(e)
+        })
+
         throw e
     }
 
@@ -205,44 +220,53 @@ export const receiveAndDecryptMessage = async (sender: Signal.Types.SignalProtoc
         }
         if (typeof plainText !== "string") {
             const error = (plainText as SignalError)
+            Log(`TYPE ERROR (SENDER: ${sender.e164},${sender.deviceId}): ${error.code} | stack: ${error.stack}`)
             if (error.code == "duplicate") {
                 return null;
             }
             if (error.code == "need-encrypt") {
                 const localAddress = await SignalModule.requireLocalAddress()
-                const emptyCipher = await SignalModule.encrypt(sender, "")
-                const emptyMessage: Server.Message = {
-                    data: {
-                        cipher: emptyCipher.cipher,
-                        type: emptyCipher.type
-                    },
-                    type: App.MessageType.EMPTY,
-                    timestamp: formatISO(new Date())
+                const profile = await getProfileData()
+                const profileCipher = await SignalModule.encrypt(sender, profile)
+                const profileMessage: Server.Message = {
+                    data: profileCipher,
+                    type: App.MessageType.PROFILE,
+                    timestamp: formatISO(new Date()),
                 }
 
                 const result = await outGoingMessage(localAddress, [{
                     address: sender,
-                    message: emptyMessage
+                    message: profileMessage
                 }])
                 if (message.fileInfo !== undefined) {
                     plainText = await SignalModule.decryptFile(sender, message.data, message.fileInfo, true)
                 }
                 else
                     plainText = await SignalModule.decrypt(sender, message.data, true)
-                if (typeof plainText !== "string") throw new Error("cannot-encrypt")
+                if (typeof plainText !== "string") throw new Error((plainText as SignalError).stack)
             }
         }
         if (message.type == App.MessageType.EMPTY) return null;
+        if (message.type == App.MessageType.PROFILE) {
+            console.log("PROFILE RECEIVED")
+            const profile = await savePartnerProfile(sender.e164, plainText as string)
+            console.log(profile)
+            await AppModule.upsertPartnerProfile(sender, profile)
+
+            return null
+        }
         const decryptedMessage: App.Types.MessageData = {
             data: plainText as string,
             owner: App.MessageOwner.PARTNER,
             timestamp: message.timestamp,
-            type: message.type
+            type: message.type,
+            senderDevice: sender.deviceId,
         }
         return decryptedMessage
         // saveMessageToLocal(sender.e164,decryptedMessage)
     } catch (e) {
-        console.log(e)
+        Log("[receiveAndDecryptMessage]")
+        Log(e)
         if (e instanceof Error)
             throw e
         else return null
@@ -306,10 +330,13 @@ export const mailboxHandler = async (): Promise<void> => {
             await inComingMessage(mail.sender, mail.message)
             socket.emit('deleteMail', mail.id)
         } catch (e) {
-            if (LogEnabled)
+            if (LogEnabled) {
                 ToastAndroid.show("Xử lí tin nhắn đến thất bại [BÁO NGAY!!]", ToastAndroid.SHORT);
+                Log(`MAIL HANDLER ERROR (ID: ${mail.id}):`)
+                Log(e)
+            }
+
         }
-        
     }
     return;
 

@@ -64,6 +64,11 @@ import messaging from '@react-native-firebase/messaging'
 import notifee, { EventType } from '@notifee/react-native';
 import Partner from './screens/partner';
 import Qrscanner from './screens/qrscanner';
+import Setting from './screens/setting';
+import { HomeProps } from './screens';
+import Account from './screens/account';
+import Profile from './screens/profile';
+import ChatSetting from './screens/chatsetting';
 
 
 
@@ -91,12 +96,19 @@ export type RootStackParamList = {
   ImageView: {
     uri: string,
   },
+  Setting: undefined,
+  Account: undefined,
+  Profile: undefined
   Partner: {
     partner: AppTypes.Types.Partner,
   },
   Qrscanner: {
     input?: any,
   },
+  ChatSetting: {
+    conversation: AppTypes.Types.Conversation,
+  }
+  
 };
 
 const deepLinksConf = {
@@ -189,6 +201,7 @@ function App(): JSX.Element {
   useEffect(() => {
     const conversationWithMessageChanged = (data: Array<AppTypes.Types.ConversationWithMessages>) => {
       dispatch(setConversationData(data))
+      // console.log(data)
       setDatabaseInitializing(false)
     }
     const eventEmiter = new NativeEventEmitter(NativeModules.AppModule)
@@ -226,6 +239,8 @@ function App(): JSX.Element {
     }
     if (!user && socketConnection) {
       socket.emit('logout')
+      SignalModule.logout()
+      BackHandler.exitApp()
     }
 
   }, [user])
@@ -322,7 +337,7 @@ function App(): JSX.Element {
 
   return (
     <>
-      <ApplicationProvider {...eva} theme={{ ...eva.light, ...MyBrandTheme }}>
+      {/* <ApplicationProvider {...eva} theme={{ ...eva.light, ...MyBrandTheme }}> */}
         <SafeAreaProvider>
           {/* <NavigationContainer theme={scheme !== 'dark' ? DefaultNavigationTheme : DarkNavigationTheme}> */}
           <TopToast />
@@ -344,39 +359,27 @@ function App(): JSX.Element {
               ) : (
                 <>
                   <Stack.Group screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name='Home' component={Home} options={({ navigation }) => ({
+                    <Stack.Screen name='Home' component={Home} options={({ navigation }: HomeProps) => ({
                       headerShown: true,
                       title: "Blackat",
                       headerRight: () => {
                         const menuItems: MenuItems[] = [
+                          
+                          {
+                            icon: 'cog-outline',
+                            label: "Cài đặt",
+                            onPress: () => {
+                              navigation.navigate('Setting')
+                            }
+                          },
                           // {
                           //   label: "test",
                           //   onPress: () => {
-                          //     AppModule.test()
-                          //   }
-                          // },
-                          // {
-                          //   label: "Dev - clear all tables",
-                          //   onPress: () => {
-                          //     SignalModule.clearAllTables().then(() => {
-                          //       DevSettings.reload()
+                          //     SignalModule.testPerformance().then((result) => {
+                          //       Alert.alert("RESULT", result)
                           //     })
                           //   }
                           // },
-                          {
-                            label: "Cài đặt",
-                            onPress: () => {
-                              Alert.alert('Cài đặt')
-                            }
-                          },
-                          {
-                            label: "Đăng xuất",
-                            onPress: () => {
-                              auth()
-                                .signOut()
-                                .then(() => console.log('User signed out!'));
-                            }
-                          },
                         ]
                         const headerItems: HeaderItems[] = [
                           {
@@ -394,6 +397,27 @@ function App(): JSX.Element {
                       title: "Tìm kiếm"
                     }} />
                     <Stack.Screen name='Qrscanner' component={Qrscanner} />
+                    <Stack.Screen name='Setting' component={Setting} options={{
+                      headerStyle: {
+                        backgroundColor: theme.colors.background
+                      },
+                      title: 'Cài đặt',
+                      headerShown: true,
+                    }} />
+                    <Stack.Screen name='Account' component={Account} options={{
+                      headerStyle: {
+                        backgroundColor: theme.colors.background
+                      },
+                      title: 'Tài khoản',
+                      headerShown: true,
+                    }} />
+                    <Stack.Screen name='Profile' component={Profile} options={{
+                      headerStyle: {
+                        backgroundColor: theme.colors.background
+                      },
+                      title: 'Hồ sơ',
+                      headerShown: true,
+                    }} />
                     <Stack.Screen name='Partner' component={Partner} options={{
                       headerShown: true,
                     }} />
@@ -406,6 +430,11 @@ function App(): JSX.Element {
                       headerShown: true,
                       presentation: 'modal',
                       title: "Chọn người nhắn tin"
+                    }}
+                    />
+                    <Stack.Screen name='ChatSetting' component={ChatSetting} options={{
+                      headerShown: true,
+                      title: "Cài đặt cuộc trò chuyện"
                     }}
                     />
                   </Stack.Group>
@@ -428,7 +457,7 @@ function App(): JSX.Element {
 
 
         </SafeAreaProvider>
-      </ApplicationProvider>
+      {/* </ApplicationProvider> */}
     </>
   );
 }

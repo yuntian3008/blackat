@@ -25,7 +25,17 @@ interface AppModuleInterface {
     markAllPartnerMessageAsRead(conversationId: number): Promise<boolean>
     markAllPartnerMessageAsUnread(conversationId: number): Promise<boolean>
     getPartner(e164: string): Promise<App.Types.Partner | null>
+    upsertPartnerProfile(address: Signal.Types.SignalProtocolAddress, profile: App.Types.Profile): Promise<boolean>
     removeConversation(e164: string) : Promise<boolean>
+    changePartnerNickname(e164: string, nickname: string): Promise<boolean>
+    removePartnerNickname(e164: string): Promise<boolean>
+
+    setPin(pin: string): Promise<boolean>
+    verifyPin(pin: string): Promise<boolean>
+    requirePin(): Promise<boolean>
+
+    changeEnablePinSecurity(e164: string, state: boolean): Promise<boolean>
+    getEnablePinSecurity(e164: string): Promise<boolean>
 }
 
 export default AppModule as AppModuleInterface

@@ -1,5 +1,6 @@
 package com.blackat.chat.module
 
+import android.app.Application
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
@@ -8,15 +9,19 @@ import android.provider.MediaStore
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import com.blackat.chat.data.database.AppDatabase
+import com.blackat.chat.data.database.SignalDatabase
 import com.blackat.chat.data.repository.AppRepository
 import com.blackat.chat.data.repository.SignalRepository
 import com.blackat.chat.signal.crypto.PreKeyUtil
+import com.blackat.chat.test.Test
 import com.blackat.chat.utils.*
 import com.blackat.chat.utils.Base64
 import com.facebook.react.bridge.*
 import com.th3rdwave.safeareacontext.getFrame
 import kotlinx.coroutines.*
 import org.signal.libsignal.protocol.*
+import org.signal.libsignal.protocol.ecc.Curve
 import org.signal.libsignal.protocol.ecc.ECPublicKey
 import org.signal.libsignal.protocol.fingerprint.Fingerprint
 import org.signal.libsignal.protocol.fingerprint.NumericFingerprintGenerator
@@ -178,7 +183,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
     private suspend fun encrypt(address: ReadableMap, data: ByteArray): WritableMap {
         val targetAddress = ReadableMapUtils.getAddress(address)
         if (!SignalRepository.signalStore().containsSession(targetAddress))
-            throw Exception("cannot-found-session")
+            throw Exception("cannot-found-session ${targetAddress.name}, ${targetAddress.deviceId}")
 
         val sessionCipher = SessionCipher(SignalRepository.signalStore(), targetAddress)
 
@@ -230,6 +235,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 Log.d("DebugV5", "MÃ HÓA THÀNH CÔNG FILE [${uri}] => [${cipherMessage.cipher}]")
                 promise.resolve(response)
             } catch (e: Exception) {
+                Log.d("SignalError", e.stackTraceToString())
                 promise.reject(e)
             }
         }
@@ -257,6 +263,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 Log.d("DebugV5", "MÃ HÓA THÀNH CÔNG [${data}] => [${cipherMessage.cipher}]")
                 promise.resolve(response)
             } catch (e: Exception) {
+                Log.d("SignalError", e.stackTraceToString())
                 promise.reject(e)
             }
         }
@@ -348,7 +355,8 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
             val plaintextByteArray: ByteArray = if (typeCipherMessage == SignalMessage.PREKEY_TYPE) {
                 if (!forcePreKey)
                     AppRepository.privateConversation().getOneWithMessages(sender.name)?.let {
-                        if (it.messages.isNotEmpty()) {
+                        val messageByDevice = it.messages.filter { it2 -> it2.message.senderDevice == sender.deviceId }
+                        if (messageByDevice.isNotEmpty()) {
                             val error = Arguments.createMap()
                             error.putString("code", "need-encrypt")
                             return error
@@ -364,8 +372,8 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                 sessionCipher.decrypt(inComingMessage)
             }
 
-            AppRepository.partner().upsert(sender.name, sender.deviceId)
 
+            AppRepository.partner().upsert(sender.name, sender.deviceId)
 
             return plaintextByteArray
         } catch (e: Exception) {
@@ -378,6 +386,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
                     error.putString("code", "need-encrypt")
                 }
             }
+            error.putString("stack",e.stackTraceToString())
             Log.e("DebugV4", e.stackTraceToString())
 
             return error
@@ -644,6 +653,7 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
 
                 promise.resolve(response)
             } catch (e: Exception) {
+                Log.d("SignalError", e.stackTraceToString())
                 promise.reject(e)
             }
         }
@@ -764,14 +774,69 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
     }
 
     @ReactMethod
+    fun updateProfile(profile: ReadableMap, promise: Promise) {
+        scope.launch {
+            try {
+                withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+                    profile.getString("name")?.let { name ->
+                        SignalRepository.account().setProfileName(name)
+                    }
+                    profile.getString("avatar")?.let { avatar ->
+                        SignalRepository.account().setProfileAvatar(avatar)
+                    }
+                    return@withContext
+                }
+                promise.resolve(true)
+            } catch (e: Exception) {
+//                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun testPerformance(data: String, promise: Promise) {
+        val test = Test()
+        val pairOfSessions = test.initializeSessionsV3()
+        val testResult = test.runTest(pairOfSessions,1000,data.toByteArray())
+        val textResult = "Kết quả: \n" +
+                "Thất bại: ${testResult.failed}\n" +
+                "Encrypt: ${testResult.encryptionResult} mili giây \n" +
+                "Decrypt: ${testResult.decryptionResult} mili giây"
+        promise.resolve(textResult)
+    }
+
+    @ReactMethod
+    fun getProfile(promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+                    val profile = Arguments.createMap()
+                    profile.putString("name",SignalRepository.account().getProfileName())
+                    profile.putString("avatar",SignalRepository.account().getProfileAvatar())
+                    profile.putString("e164",SignalRepository.account().getE164())
+
+                    return@withContext profile
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+//                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
     fun logout() {
         scope.launch {
             try {
                 val response = withContext(context = Dispatchers.IO) {
                     if (reactApplicationContext == null)
                         throw Exception("context null")
-                    SignalRepository.account().resetLocalDeviceId()
-                    SignalRepository.account().resetE164()
+                    AppDatabase.getInstance(reactApplicationContext).clearAllTables()
+                    SignalDatabase.getInstance(reactApplicationContext).clearAllTables()
                 }
 
             } catch (e: Exception) {

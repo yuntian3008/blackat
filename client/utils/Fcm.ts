@@ -1,11 +1,12 @@
 import { FirebaseMessagingTypes } from "@react-native-firebase/messaging";
-import notifee, { AndroidStyle, DisplayedNotification, EventType, Notification } from '@notifee/react-native';
+import notifee, { AndroidImportance, AndroidStyle, DisplayedNotification, EventType, Notification } from '@notifee/react-native';
 import { App, Server } from "../../shared/types";
 import { encryptAndSendMessage, receiveAndDecryptMessage, saveMessageToLocal } from "./Messaging";
 import { format, formatDistanceStrict, formatISO, isToday, parseISO } from "date-fns";
 import { da, vi } from "date-fns/locale";
 import socket from "./socket";
 import SignalModule from "../native/android/SignalModule";
+import AppModule from "../native/android/AppModule";
 
 const displaySentAt = (sentAt: string): string => {
     const date = parseISO(sentAt)
@@ -26,7 +27,8 @@ export const updateChat = async (notification: Notification, input: string) => {
         data: input,
         owner: App.MessageOwner.SELF,
         timestamp: formatISO(new Date()),
-        type: App.MessageType.TEXT
+        type: App.MessageType.TEXT,
+        senderDevice: 0,
     }
     const result = await encryptAndSendMessage(localAddress, e164, messageData )
     if (result) {
@@ -61,16 +63,7 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
     // })
     if (socket.connected) return
 
-    notifee.createChannel({
-        id: 'inComingMessage',
-        name: 'Tin nhắn đến',
-        // groupId: 'conversation',
-        lights: true,
-        vibration: true,
-        vibrationPattern: [300, 300, 300, 300],
-        sound: 'incoming',
-        badge: true,
-    })
+    
 
     if (message.data) {
         let data: Server.MessagePackage = JSON.parse(message.data.message)
@@ -93,7 +86,8 @@ export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMe
                 data: "",
                 owner: App.MessageOwner.PARTNER,
                 timestamp: data.message.timestamp,
-                type: data.message.type
+                type: data.message.type,
+                senderDevice: data.address.deviceId,
             }
         }
         
@@ -112,7 +106,8 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
 
     const displayed = await notifee.getDisplayedNotifications()
     const old = displayed.find((d => d.id === notificationId))
-
+    
+    
 
     let messageDisplay = "đã gửi 1 tin nhắn";
     // if (decrypted.type === App.MessageType.TEXT) messageDisplay = decrypted.data
@@ -124,6 +119,15 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
 
     if (data.type === App.MessageType.STICKER) messageDisplay = "đã gửi 1 nhãn dán"
 
+    try {
+        const pinSecurity = await AppModule.getEnablePinSecurity(name)
+        if (pinSecurity) {
+            messageDisplay = "đã gửi 1 tin nhắn mới"
+        }
+    } catch (err) {
+        return
+    }
+    
     const conversation: Array<string> = [
         `${messageDisplay}`
     ]
@@ -131,6 +135,8 @@ export const pushInComingMessageNotification = async (name: string, data: App.Ty
         const oldConversation: Array<string> = JSON.parse(old.notification.data!.conversation as string)
         conversation.unshift(...oldConversation)
     }
+
+    
 
 
     notifee.displayNotification({

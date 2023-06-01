@@ -1,6 +1,6 @@
 import { CountryCode } from "libphonenumber-js/types"
 import { NativeModules } from "react-native"
-import { Server, Signal, SignalError } from "../../../shared/types"
+import { App, Server, Signal, SignalError } from "../../../shared/types"
 
 const { SignalModule } = NativeModules
 
@@ -12,6 +12,7 @@ interface SignalModuleInterface {
     }
     // testBasicPreKeyV3(): void
     clearAllTables(): Promise<void>
+    logout: () => void
     logged(phonenumber: String, deviceId: number): void
     onFirstEverAppLaunch(): Promise<boolean>
     requireIdentityKey(): Promise<Signal.Types.IdentityKey>
@@ -29,8 +30,11 @@ interface SignalModuleInterface {
     requireFingerprint(e164: string): Promise<Signal.Types.Fingerprint>
     compareFingerprint(qrContent: string, e164: string): Promise<boolean>
 
+    updateProfile(profile: App.Types.Profile): Promise<boolean>
+    getProfile(): Promise<App.Types.Profile>
+
     // test
-    writeFile(path: string): Promise<string>
+    testPerformance(data: string): Promise<string>
 }
 
 export default SignalModule as SignalModuleInterface

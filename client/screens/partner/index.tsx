@@ -1,12 +1,14 @@
-import { Alert, SafeAreaView, View } from "react-native";
-import { ActivityIndicator, Avatar, Button, DataTable, IconButton, List, Text, TextInput, shadow, useTheme } from "react-native-paper";
+import { Alert, SafeAreaView, ToastAndroid, View, useColorScheme } from "react-native";
+import { ActivityIndicator, Avatar, Button, DataTable, Dialog, IconButton, List, Portal, Text, TextInput, shadow, useTheme } from "react-native-paper";
 import { PartnerProps } from "..";
 import { useEffect, useState } from "react";
 import { App } from "../../../shared/types";
-import { AppTheme } from "../../theme";
+import { AppTheme, darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../../theme";
 import QRCode from 'react-native-qrcode-svg';
 import SignalModule from "../../native/android/SignalModule";
 import { ScrollView } from "react-native-gesture-handler";
+import { MyAvatar } from "../../components/MyAvatar";
+import AppModule from "../../native/android/AppModule";
 
 
 export default function Partner({ navigation, route }: PartnerProps): JSX.Element {
@@ -15,11 +17,15 @@ export default function Partner({ navigation, route }: PartnerProps): JSX.Elemen
     const [loadingFingerprint, setLoadingFingerprint] = useState<boolean>(true)
     const [qrContent, setQrContent] = useState<string>()
     const [displayText, setDisplayText] = useState<string[][]>([])
-    const displayName = route.params.partner.name ? route.params.partner.name : route.params.partner.e164
+    const displayName = route.params.partner.nickname ?? route.params.partner.name ?? route.params.partner.e164
+    const schema = useColorScheme()
+    const [showNameSetting, setShowNameSetting] = useState<boolean>(false)
+    const [savingName, setSavingName] = useState<boolean>(false)
 
+    const [nameTextInput, setNameTextInput] = useState<string>("")
     useEffect(() => {
         navigation.setOptions({
-            title: route.params.partner.e164
+            title: "Hồ sơ người liên hệ"
         })
         const batchReduce = function <T>(arr: T[], batchSize: number): T[][] {
             return arr.reduce((batches, curr, i) => {
@@ -45,6 +51,57 @@ export default function Partner({ navigation, route }: PartnerProps): JSX.Elemen
 
     return (
         <SafeAreaView>
+            <Portal>
+            <Dialog theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness}
+                    style={{
+                        borderRadius: 20,
+                    }}
+                    visible={showNameSetting} onDismiss={() => setShowNameSetting(false)}>
+                    <Dialog.Title style={{ textAlign: 'center' }}>Đặt biệt hiệu cho {route.params.partner.name ?? route.params.partner.e164}</Dialog.Title>
+                    <Dialog.Content style={{ gap: 25 }}>
+                        <TextInput
+                            disabled={savingName}
+                            style={{
+                                width: '100%'
+                            }}
+                            label="Biệt hiệu"
+                            value={nameTextInput}
+                            onChangeText={text => setNameTextInput(text)}
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => {
+                             AppModule.removePartnerNickname(route.params.partner.e164).then(() => {
+                                ToastAndroid.show("Xóa biệt hiệu thành công", 400)
+                                setNameTextInput("")
+                                setShowNameSetting(false)
+                                navigation.goBack()
+                            })
+                            .catch((err) => {
+                                ToastAndroid.show("Xóa biệt hiệu thất bại", 400)
+                                console.log(err)
+                            })
+                        }} textColor={theme.colors.error}>Xóa biệt hiệu</Button>
+                        <Button onPress={() => setShowNameSetting(false)}>Hủy</Button>
+                        <Button loading={savingName} onPress={() => {
+                            setSavingName(true)
+                            AppModule.changePartnerNickname(route.params.partner.e164, nameTextInput).then(() => {
+                                ToastAndroid.show("Đặt biệt hiệu thành công", 400)
+                                setNameTextInput("")
+                                setShowNameSetting(false)
+                                navigation.goBack()
+                            })
+                            .catch((err) => {
+                                ToastAndroid.show("Đặt biệt hiệu thất bại", 400)
+                                console.log(err)
+                            })
+                            .finally(() => {
+                                setSavingName(false)
+                            })
+                        }}>Lưu</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
             <ScrollView>
                 <View style={{ gap: 10, flexDirection: 'column', alignItems: 'center', height: '100%' }}>
                     <View style={{
@@ -65,8 +122,14 @@ export default function Partner({ navigation, route }: PartnerProps): JSX.Elemen
                         elevation: 4,
 
                     }}>
-                        <Avatar.Icon icon={'account'} />
+                        <MyAvatar image={route.params.partner.avatar} />
                         <Text variant="headlineSmall">{displayName}</Text>
+                        { 
+                            route.params.partner.nickname || route.params.partner.name ?
+                            <Text variant="titleMedium">{ route.params.partner.e164 }</Text> : null
+                        }
+                        <Button icon={'rename-box'} onPress={() => setShowNameSetting(true)} >Đặt biệt hiệu</Button>
+
                     </View>
                     {
                         <View style={{

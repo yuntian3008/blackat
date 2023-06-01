@@ -30,6 +30,12 @@ interface PrivateConversationDao {
     @Query("UPDATE private_conversation SET ting = ting + 1 WHERE e164 = :e164")
     suspend fun ting(e164: String)
 
+    @Query("UPDATE private_conversation SET allowNotification = :state WHERE e164 = :e164")
+    suspend fun setAllowNotification(e164: String, state: Boolean)
+
+    @Query("UPDATE private_conversation SET enablePinSecurity = :state WHERE e164 = :e164")
+    suspend fun setEnablePinSecurity(e164: String, state: Boolean)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(privateConversation: PrivateConversation): Long
 

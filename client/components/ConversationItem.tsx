@@ -2,6 +2,8 @@ import { format, isToday, parseISO } from "date-fns"
 import { vi } from "date-fns/locale"
 import { Button as NativeButton, Pressable, PressableProps, TouchableNativeFeedback, TouchableOpacity, View } from "react-native"
 import { Avatar, Badge, List, Text, TouchableRipple, useTheme } from "react-native-paper"
+import { MyAvatar } from "./MyAvatar"
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 
 export type Conversation = {
     name: string,
@@ -13,6 +15,7 @@ export type Conversation = {
     onPress?: () => void,
     onImagePress?: () => void,
     onLongPress?: () => void,
+    isPinSecurity?: boolean
 }
 
 const displaySentAt = (sentAt: string): string => {
@@ -31,6 +34,7 @@ export default function ConversationItem({
     onPress,
     onImagePress,
     onLongPress,
+    isPinSecurity
 }: Conversation): JSX.Element {
     const theme = useTheme()
     return (
@@ -49,7 +53,7 @@ export default function ConversationItem({
                 fontWeight: ting !== undefined && ting > 0 ? 'bold' : 'normal'
             }}
             descriptionNumberOfLines={1}
-            description={lastMessage}
+            description={isPinSecurity ? "[Tin nhắn]" : lastMessage}
             right={props => (
                 <View style={{
                     padding: 0,
@@ -57,31 +61,21 @@ export default function ConversationItem({
                     flexDirection: 'column',
                     justifyContent: 'space-between'
                 }}>
-                    <Text>{displaySentAt(lastDateTime)}</Text>
                     {
-                        (ting !== undefined && ting > 0) ? 
-                        <Badge style={{ backgroundColor: theme.colors.tertiary }}>{ting}</Badge> :
-                        null
+                        isPinSecurity ? 
+                        <Icon name="lock-outline" size={20} color={theme.colors.primary}/>
+                        : <Text>{displaySentAt(lastDateTime)}</Text>
+                    }
+                    
+                    {
+                        (ting !== undefined && ting > 0 && !isPinSecurity) ?
+                            <Badge style={{ backgroundColor: theme.colors.tertiary }}>{ting}</Badge> :
+                            null
                     }
                 </View>
             )}
             left={props =>
-                <View style={{
-                    borderRadius: 50,
-                    overflow: 'hidden'
-                }}>
-                    <TouchableNativeFeedback
-                        background={TouchableNativeFeedback.Ripple(theme.colors.primaryContainer,true)}
-                        onPress={onImagePress}
-                    >
-                        {
-                            image ?
-                                <Avatar.Image size={48} source={{ uri: image }} /> :
-                                <Avatar.Icon size={48} icon={"account"} />
-                        }
-                    </TouchableNativeFeedback>
-                </View>
-
+                <MyAvatar size={48} image={image} onPress={onImagePress} />
             }
         />
         // </TouchableRipple>

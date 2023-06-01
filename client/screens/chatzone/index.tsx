@@ -1,5 +1,5 @@
 import { Alert, Keyboard, SafeAreaView, TextInput as RNTextInput, ToastAndroid, View, KeyboardEvent, BackHandler } from "react-native";
-import { Avatar, Button, Dialog, Divider, IconButton, List, Menu, Modal, Portal, Searchbar, Text, TextInput, useTheme } from "react-native-paper";
+import { Avatar, Button, Dialog, Divider, IconButton, List, Menu, Modal, Portal, Searchbar, Switch, Text, TextInput, useTheme } from "react-native-paper";
 import { ChatZoneProps } from "..";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header, { HeaderItems } from "../../components/Header";
@@ -19,7 +19,11 @@ import { encryptAndSendMessage, saveMessageToLocal } from "../../utils/Messaging
 import { useColorScheme } from "react-native";
 import { darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../../theme";
 import { ChatController } from "../../components/ChatController";
+import { MyAvatar } from "../../components/MyAvatar";
+import { HeaderBackButton } from '@react-navigation/elements';
+import PinCodeInput from "../../components/PinCodeInput";
 
+const testMode = false
 
 export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Element {
     const theme = useTheme()
@@ -41,6 +45,11 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         title: '',
         content: ''
     })
+
+    const [isSwitchOn, setIsSwitchOn] = useState(false);
+
+    const onToggleSwitch = () => setIsSwitchOn(!isSwitchOn);
+
 
     // LOAD LOCAL ADDRESS
     useEffect(() => {
@@ -69,6 +78,45 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             ui.push(convertUI(v.message))
             // console.log(v)
         })
+        navigation.setOptions({
+            title: thisConversation?.partner.nickname ?? thisConversation?.partner.name ?? route.params.e164,
+            headerLeft: (props) => (
+                <View style={{
+                    flexDirection: 'row',
+                    gap: 10,
+                }}>
+                    <HeaderBackButton {...props} />
+                    <MyAvatar size={36} image={thisConversation?.partner.avatar} onPress={() => {
+                        AppModule.getPartner(route.params.e164).then((partner) => {
+                            if (partner !== null)
+                                navigation.navigate('Partner', {
+                                    partner: partner
+                                })
+
+                        }).catch((err) => {
+                            Alert.alert("Không tìm thấy thông tin")
+                            console.log(err)
+                        })
+                    }} />
+                </View>
+                
+            ),
+            headerRight: () => (
+                <View style={{
+                    flexDirection: 'row'
+                }}>
+                    {testMode ? <Switch value={isSwitchOn} onValueChange={onToggleSwitch} /> : null }
+                    {/* <Header items={headerItems} /> */}
+                    <IconButton icon={'dots-vertical'} onPress={() => {
+                        const thisConversation = conversationData.find(v => v.conversation.e164 == route.params.e164)
+                        navigation.navigate('ChatSetting', {
+                            conversation: thisConversation!.conversation
+                        })
+                    }} />
+                </View>
+                
+            ),
+        })
         setBubbles(ui)
         const state = thisConversation?.state
         switch (state) {
@@ -85,54 +133,55 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
         if (thisConversation)
             AppModule.markAllPartnerMessageAsRead(thisConversation.conversation.id)
-    }, [conversationData])
+    }, [conversationData,isSwitchOn])
 
     const schema = useColorScheme()
-    const headerItems: HeaderItems[] = [
-        {
-            label: 'dots-vertical',
-            items: [
-                {
-                    label: 'Xóa cuộc trò chuyện',
-                    onPress: () => {
-                        setDialogData({
-                            icon: 'help',
-                            title: `Bạn có chắc muốn xóa cuộc trò chuyện với ${route.params.e164} ?`,
-                            content: `Dữ liệu trò chuyện này chỉ được xóa ở phía bạn và không thể khôi phục.`,
-                            cancel: () => {
-                                hideDialog()
-                            },
-                            ok: () => {
-                                hideDialog()
-                                AppModule.removeConversation(route.params.e164).then((v) => {
-                                    if (v) {
-                                        navigation.goBack()
-                                        setDialogData({
-                                            'icon': 'information',
-                                            title: 'Xóa cuộc trò chuyện thành công',
-                                            content: 'Dữ liệu trò chuyện đã được xóa'
-                                        })
-                                        showDialog()
-                                    } else {
-                                        setDialogData({
-                                            'icon': 'alert',
-                                            title: 'Xóa cuộc trò chuyện không thành công',
-                                            content: 'Đã xảy ra lỗi, vui lòng thử lại'
-                                        })
-                                        showDialog()
-                                    }
-                                })
-                            }
-                        })
-                        showDialog()
-                    }
-                },
+    // const headerItems: HeaderItems[] = [
+    //     {
+    //         label: 'dots-vertical',
+    //         items: [
+    //             {
+    //                 label: 'Xóa cuộc trò chuyện',
+    //                 onPress: () => {
+    //                     setDialogData({
+    //                         icon: 'help',
+    //                         title: `Bạn có chắc muốn xóa cuộc trò chuyện với ${route.params.e164} ?`,
+    //                         content: `Dữ liệu trò chuyện này chỉ được xóa ở phía bạn và không thể khôi phục.`,
+    //                         cancel: () => {
+    //                             hideDialog()
+    //                         },
+    //                         ok: () => {
+    //                             hideDialog()
+    //                             AppModule.removeConversation(route.params.e164).then((v) => {
+    //                                 if (v) {
+    //                                     navigation.goBack()
+    //                                     setDialogData({
+    //                                         'icon': 'information',
+    //                                         title: 'Xóa cuộc trò chuyện thành công',
+    //                                         content: 'Dữ liệu trò chuyện đã được xóa'
+    //                                     })
+    //                                     showDialog()
+    //                                 } else {
+    //                                     setDialogData({
+    //                                         'icon': 'alert',
+    //                                         title: 'Xóa cuộc trò chuyện không thành công',
+    //                                         content: 'Đã xảy ra lỗi, vui lòng thử lại'
+    //                                     })
+    //                                     showDialog()
+    //                                 }
+    //                             })
+    //                         }
+    //                     })
+    //                     showDialog()
+    //                 }
+    //             },
 
-            ]
-        }
-    ]
+    //         ]
+    //     }
+    // ]
 
     const convertUI = (message: App.Types.MessageData): ChatItemProps => {
+        const partner = conversationData.find(v => v.conversation.e164 == route.params.e164)!.partner
         return {
             kind: ChatItemKind.bubble,
             data: {
@@ -145,26 +194,15 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 type: toBubbleChatType(message.type),
                 sentAt: message.timestamp,
                 partner: (message.owner == App.MessageOwner.PARTNER) ? {
-                    name: route.params.e164
+                    name: partner.nickname ?? partner.name ?? route.params.e164,
+                    avatar: partner.avatar
                 } : undefined,
-                // onPartnerAvatarPress: (message.owner == App.MessageOwner.PARTNER) ? () => {
-                //     AppModule.getPartner(route.params.e164).then((partner) => {
-                //         if (partner !== null)
-                //             navigation.navigate('Partner', {
-                //                 partner: partner
-                //             })
-                //     }).catch((err) => {
-                //         Alert.alert("Không tìm thấy thông tin")
-                //         console.log(err)
-                //     })
-                // } : undefined,
             }
         }
     }
 
 
-
-    const addMessage = (message: App.Types.MessageData) => {
+    const addPreMessage = (message: App.Types.MessageData) => {
         const ui = convertUI(message)
         setBubbles((prevState) => [
             ui,
@@ -172,8 +210,17 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         ])
     }
 
+
     const canSending = async (messageData: App.Types.MessageData, fileInfo?: Server.FileInfo) => {
+        if (testMode && isSwitchOn) {
+            SignalModule.testPerformance(messageData.data).then((result) => {
+                Alert.alert("Kết quả hiệu suất:", result)
+            })
+            return
+        }
+        
         try {
+            addPreMessage(messageData)
             let messageState = App.MessageState.SENDING
             setConversationState(ConversationState.sending)
             if (socketConnection) {
@@ -194,9 +241,9 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             data: msg,
             owner: App.MessageOwner.SELF,
             timestamp: formatISO(new Date()),
-            type: App.MessageType.TEXT
+            type: App.MessageType.TEXT,
+            senderDevice: 0,
         }
-        addMessage(messageData)
         await canSending(messageData)
         // await encryptAndSendMessage(localAddress!, route.params.e164, messageData)
         // await saveMessageToLocal(messageData)
@@ -207,9 +254,9 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             data: sticker,
             owner: App.MessageOwner.SELF,
             timestamp: formatISO(new Date()),
-            type: App.MessageType.STICKER
+            type: App.MessageType.STICKER,
+            senderDevice: 0
         }
-        addMessage(messageData)
         await canSending(messageData)
     }
 
@@ -229,11 +276,18 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     const handleImage = async (result: ImagePickerResponse) => {
         if (result.assets && result.assets.length > 0) {
             const asset = result.assets[0]
+           
 
             const path = asset.fileName?.replace("rn_image_picker_lib_temp_", "")
             if (asset.fileName && asset.type && asset.fileSize && asset.uri) {
                 // const fileType = path.split('.').pop()
                 // const fileName = path.split('.').shift()
+                if (asset.fileSize > 10e6) {
+                    ToastAndroid.show("Chỉ hỗ trợ gửi ảnh dưới 10MB",400)
+                    return
+                }
+                   
+                
 
                 const fileInfo: Server.FileInfo = {
                     name: asset.fileName,
@@ -245,9 +299,9 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                     data: asset.uri,
                     owner: App.MessageOwner.SELF,
                     timestamp: formatISO(new Date()),
-                    type: App.MessageType.IMAGE
+                    type: App.MessageType.IMAGE,
+                    senderDevice: 0,
                 }
-                addMessage(messageData)
                 console.log("dang gui den server")
                 await canSending(messageData, fileInfo)
             }
@@ -261,8 +315,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         // handleDismissModalPress()
         const result = await launchImageLibrary({
             mediaType: 'photo',
-            includeBase64: true,
         })
+        // console.log(result.assets)
         handleImage(result)
 
     }
@@ -280,39 +334,17 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         scrollToBottom()
     }, [bubbles])
 
-    useEffect(() => {
-        navigation.setOptions({
-            headerRight: () => (
-                <Header items={headerItems} />
-            ),
-            title: route.params.e164
-        })
-    }, [navigation])
+    // useEffect(() => {
+    //     navigation.setOptions({
+    //         headerRight: () => (
+    //             <Header items={headerItems} />
+    //         ),
+    //         title: route.params.e164
+    //     })
+    // }, [navigation])
 
 
     let scrollRef = useRef<ScrollView>(null)
-
-
-    // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-    // const messageInputRef = useRef<RNTextInput>(null);
-
-    // variables
-    // const snapPoints = useMemo(() => ['50%', '50%'], []);
-
-    // callbacks
-    // const handlePresentModalPress = useCallback(() => {
-    //     bottomSheetModalRef.current?.present();
-    // }, []);
-    // const handleDismissModalPress = useCallback(() => {
-    //     bottomSheetModalRef.current?.dismiss();
-    // }, []);
-    // const handleSheetChanges = useCallback((index: number) => {
-    //     if (index < 0)
-    //         messageInputRef.current?.focus()
-    //     else
-    //         messageInputRef.current?.blur()
-    //     console.log('handleSheetChanges', index);
-    // }, []);
 
 
     return (

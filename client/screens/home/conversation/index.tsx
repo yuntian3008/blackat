@@ -1,5 +1,5 @@
 import { Layout } from "@ui-kitten/components";
-import { Alert, NativeModules, SafeAreaView, ScrollView, View, useColorScheme } from "react-native";
+import { Alert, NativeModules, SafeAreaView, ScrollView, ToastAndroid, View, useColorScheme } from "react-native";
 import auth from '@react-native-firebase/auth';
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { ConversationProps } from "../..";
@@ -18,6 +18,7 @@ import { enqueueTopToast } from "../../../redux/TopToast";
 import { TopToastType } from "../../../components/TopToast";
 import { darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../../../theme";
 import { compareAsc, compareDesc, parseISO } from "date-fns";
+import PinCodeInput from "../../../components/PinCodeInput";
 
 
 
@@ -36,6 +37,12 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
     const dispatch = useAppDispatch()
 
     const schema = useColorScheme()
+    const startChat = (conversation: App.Types.Conversation) => {
+        AppModule.markAllPartnerMessageAsRead(conversation.id)
+        navigation.getParent()?.navigate('ChatZone', {
+            e164: conversation.e164
+        })
+    }
 
     useEffect(() => {
         const ui: Array<ConversationData> = []
@@ -60,10 +67,12 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
                         break;
                 }
                 ui.push({
-                    name: v.conversation.e164,
+                    isPinSecurity: v.conversation.enablePinSecurity,
+                    name: v.partner.nickname ?? v.partner.name ?? v.conversation.e164,
                     lastDateTime: lastMessage.timestamp,
                     lastMessage: contentLastMessage,
                     ting: unreadMessage.length,
+                    image: v.partner.avatar,
                     onImagePress: () => {
                         AppModule.getPartner(v.conversation.e164).then((partner) => {
                             if (partner !== null)
@@ -78,10 +87,17 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
 
                     },
                     onPress: () => {
-                        AppModule.markAllPartnerMessageAsRead(v.conversation.id)
-                        navigation.getParent()?.navigate('ChatZone', {
-                            e164: v.conversation.e164
-                        })
+                        setRequireStartConversation(v.conversation)
+                        // if (v.conversation.enablePinSecurity) {
+
+                        // }
+                        // else {
+                        //     AppModule.markAllPartnerMessageAsRead(v.conversation.id)
+                        //     navigation.getParent()?.navigate('ChatZone', {
+                        //         e164: v.conversation.e164
+                        //     })
+                        // }
+
                     },
                     onLongPress: () => {
                         setConversationOption(v.conversation)
@@ -93,11 +109,49 @@ function Conversation({ navigation }: ConversationProps): JSX.Element {
         setConversations(ui)
     }, [conversationData])
 
+    
 
+    const [pinCodeInput, setPinCodeInput] = useState(false)
+    const [requireStartConversation, setRequireStartConversation] = useState<App.Types.Conversation>()
+
+    useEffect(() => {
+        if (requireStartConversation !== undefined) {
+            if (requireStartConversation.enablePinSecurity) {
+                setPinCodeInput(true)
+            }
+            else {
+                startChat(requireStartConversation)
+                setRequireStartConversation(undefined)
+            }
+        }
+    }, [requireStartConversation])
+
+    const dismissStartConversation = () => {
+        setPinCodeInput(false) 
+        setRequireStartConversation(undefined)
+    }
+    const submitPinRequireStartConversation = (pin: string) => {
+        AppModule.verifyPin(pin)
+        .then((r) => {
+            if (r) {
+                startChat(requireStartConversation!)
+                setRequireStartConversation(undefined)
+            }
+            else {
+                ToastAndroid.show("Mã pin không hợp lệ",400)
+                setRequireStartConversation(undefined)
+            }
+        })
+    }
 
     return (
         <SafeAreaView>
             {loading && <LoadingOverlay />}
+            <PinCodeInput
+                visible={pinCodeInput}
+                dismiss={dismissStartConversation}
+                submit={submitPinRequireStartConversation}
+            />
             <Portal>
                 <Dialog visible={conversationOption !== undefined} style={{ borderRadius: 20 }} onDismiss={hideDialog} theme={schema == 'dark' ? darkThemeWithoutRoundness : lightThemeWithoutRoundness}>
                     <Dialog.Title>{conversationOption?.e164}</Dialog.Title>

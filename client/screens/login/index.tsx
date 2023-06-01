@@ -1,10 +1,10 @@
-import { Alert, SafeAreaView, Text, View } from "react-native";
+import { Alert, SafeAreaView, View } from "react-native";
 import { LoginProps } from "..";
 import { useEffect, useState } from "react";
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { CountryCode, getCountries, getCountryCallingCode, isPossiblePhoneNumber, isValidPhoneNumber, parsePhoneNumber } from "libphonenumber-js/mobile";
 import { LoadingIndicator } from "../../components/Utils";
-import { Button, HelperText, TextInput, useTheme } from "react-native-paper";
+import { Button, HelperText, Text, TextInput, useTheme } from "react-native-paper";
 import { PaperSelect } from 'react-native-paper-select';
 import { AppTheme } from "../../theme";
 
@@ -124,10 +124,14 @@ function Login({ navigation }: LoginProps): JSX.Element {
         <SafeAreaView>
             {/* UI kittin + style */}
             <View style={{ gap: 10, flexDirection: 'column', alignItems: 'center', height: '100%', paddingHorizontal: 20, paddingVertical: 40 }}>
-                <Text className="text-3xl self-start text-neutral-700">
+                <Text variant="headlineMedium" style={{
+                    alignSelf: 'flex-start'
+                }}>
                     Nhập số điện thoại của bạn
                 </Text>
-                <Text className="self-start text-gray-700 text-md">
+                <Text variant="titleSmall" style={{
+                    alignSelf: 'flex-start'
+                }}>
                     Chúng tôi sẽ gửi đến bạn mã xác minh
                 </Text>
                 <View style={{
@@ -137,11 +141,17 @@ function Login({ navigation }: LoginProps): JSX.Element {
                     gap: 2,
                     marginTop: 5
                 }}>
-        
+
                     <PaperSelect
+                        textInputBackgroundColor={theme.colors.background}
+                        textInputStyle={{
+                            borderColor: 'red'
+                        }}
+                        outlineColor={theme.colors.outline}
                         textInputMode="outlined"
                         containerStyle={{
                             width: '30%',
+                            backgroundColor: 'transparent'
                         }}
                         label={selectPaper.value}
                         value={selectPaper.value}

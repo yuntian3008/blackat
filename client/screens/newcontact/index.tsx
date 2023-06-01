@@ -9,6 +9,11 @@ import AppModule from "../../native/android/AppModule";
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import { enqueueTopToast } from "../../redux/TopToast";
 import { TopToastType } from "../../components/TopToast";
+import { App } from "../../../shared/types";
+import { encryptAndSendMessage, saveMessageToLocal } from "../../utils/Messaging";
+import { formatISO } from "date-fns";
+import { readFile } from "react-native-fs";
+import { getProfileData } from "../../utils/Setting";
 
 const { CURRENT_COUNTRY_CODE } = SignalModule.getConstants();
 
@@ -28,9 +33,38 @@ export default function NewContact({ navigation }: NewContactProps): JSX.Element
 
     const createConversation = async (searchResult: SearchResult) => {
         if (socketConnection) {
-            navigation.navigate('ChatZone', {
-                e164: searchResult.phoneNumber
-            })
+            // const profile = await SignalModule.getProfile()
+            const profile = await getProfileData()
+            const localAddress = await SignalModule.requireLocalAddress()
+            const e164 = searchResult.phoneNumber
+            const profileMessage: App.Types.MessageData = {
+                data: profile,
+                owner: App.MessageOwner.SELF,
+                timestamp: formatISO(new Date()),
+                type: App.MessageType.PROFILE,
+                senderDevice: 0,
+            }
+            // console.log("SEND PROFILE")
+            // console.log(profileMessage)
+            try {
+                const result = await encryptAndSendMessage(localAddress!, e164, profileMessage)
+                if (result) {
+                    navigation.navigate('ChatZone', {
+                        e164: searchResult.phoneNumber
+                    })
+                }
+                else {
+                    ToastAndroid.show("Gửi hồ sơ cá nhân thất bại", 400)
+                }
+            } catch (err)
+            {   
+                console.log("sending profile")
+                console.log(err)
+            }
+            
+            
+                   
+           
         } else {
             dispatch(enqueueTopToast({
                 content: 'Máy chủ bị gián đoạn',

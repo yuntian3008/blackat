@@ -63,6 +63,7 @@ export namespace App {
         export const IMAGE = 1
         export const STICKER = 2
         export const EMPTY = -1
+        export const PROFILE = -2
     }
     export namespace MessageOwner {
         export const SELF = "SELF"
@@ -76,6 +77,11 @@ export namespace App {
         export const UNREAD = "UNREAD"
     }
     export namespace Types {
+        export type Profile = {
+            name?: string | null,
+            avatar?: string | null,
+            e164?: string,
+        }
         export type DialogData = {
             icon: string,
             title: string,
@@ -89,16 +95,20 @@ export namespace App {
             name?: string,
             deviceId: number,
             avatar?: string,
+            nickname?: string,
         }
         export type Conversation = {
             id: number,
             e164: string,
+            enablePinSecurity: boolean,
+            allowNotification: boolean,
         }
         export type MessageData = {
             owner: string,
             data: string,
             type: number,
             timestamp: string,
+            senderDevice: number,
             state?: string,
         }
         export type Message = {
@@ -116,6 +126,7 @@ export namespace App {
             messages: Array<Message>
             state: string,
             conversation: Conversation
+            partner: Partner
         }
     }
 }
@@ -150,6 +161,7 @@ export namespace Server {
 export interface SignalError {
     code: string,
     message?: string,
+    stack?: string,
 }
 
 export namespace Signal {

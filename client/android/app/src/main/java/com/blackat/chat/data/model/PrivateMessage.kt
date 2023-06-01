@@ -19,7 +19,7 @@ data class Message(
         val data: String,
         val type: Int,
         val timestamp: String,
-
+        val senderDevice: Int,
 ) {
     var state: MessageState = MessageState.UNKNOWN
     @Embedded
@@ -27,6 +27,9 @@ data class Message(
     companion object {
         const val TEXT_TYPE = 0
         const val IMAGE_TYPE = 1
+        const val STICKER_TYPE = 2
+        const val EMPTY_TYPE = -1
+        const val PROFILE_TYPE = -2
         const val PARTNER = "PARTNER"
         const val SELF = "SELF"
     }

@@ -13,6 +13,8 @@ data class PrivateConversation(
     var id: Int? = null
     @ColumnInfo(defaultValue = "0")
     var ting: Int? = 0
+    var allowNotification: Boolean = true
+    var enablePinSecurity: Boolean = false
 }
 
 data class PrivateConversationWithMessages(
@@ -21,5 +23,11 @@ data class PrivateConversationWithMessages(
                 parentColumn = "id",
                 entityColumn = "privateConversationId"
         )
-        val messages: List<PrivateMessage>
+        val messages: List<PrivateMessage>,
+        @Relation(
+                entity = Partner::class,
+                parentColumn = "partnerId",
+                entityColumn = "id"
+            )
+        val partner: Partner
 )

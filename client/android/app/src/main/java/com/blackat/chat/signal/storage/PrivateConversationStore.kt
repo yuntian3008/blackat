@@ -52,6 +52,10 @@ class PrivateConversationStore(
         return conversationStore.ting(e164)
     }
 
+    suspend fun changeEnablePinSecurity(e164: String, state: Boolean) {
+        return conversationStore.setEnablePinSecurity(e164, state)
+    }
+
     suspend fun getOneWithMessages(e164: String): PrivateConversationWithMessages? {
         return conversationStore.getOneWithMessages(e164)
     }

@@ -108,8 +108,9 @@ android {
         applicationId "com.blackat.chat"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "0.0004.alpha"
+        versionCode 5
+        versionName "0.0005.alpha"
+        vectorDrawables.useSupportLibrary = true
     }
 
     splits {
@@ -195,6 +196,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'com.google.android.material:material:1.5.0'
 
+    implementation 'com.password4j:password4j:1.7.0'
+
+
+
     def room_version = "2.5.1"
 
     implementation("org.signal:libsignal-android:0.22.0")
@@ -221,6 +226,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+//    implementation project(':react-native-fs')
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")

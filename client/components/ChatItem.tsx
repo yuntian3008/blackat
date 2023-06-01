@@ -7,6 +7,8 @@ import { TypingAnimation } from 'react-native-typing-animation';
 import { App } from "../../shared/types"
 import { useState } from "react"
 import { darkThemeWithoutRoundness, lightThemeWithoutRoundness } from "../theme"
+import { MyAvatar } from "./MyAvatar"
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 
 export type Conversation = {
     name: string,
@@ -78,12 +80,9 @@ const StateBadge = ({ state }: { state: ConversationState }): JSX.Element => {
             break;
         case ConversationState.error:
             return (
-                <Avatar.Icon
-                    style={{ backgroundColor: bg, borderWidth: 1, margin: 1, borderColor: useTheme().colors.error }}
-                    color={useTheme().colors.errorContainer}
-                    icon={'alert-circle'}
-                    size={16}
-                />
+                <Icon style={{
+                    borderColor: useTheme().colors.error
+                }} name="alert-circle" size={16} color={useTheme().colors.error} />
             )
         default:
             bg = null
@@ -132,6 +131,12 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
                 maxWidth: '70%',
             }}>
                 {partner && (
+                    // <MyAvatar size={28} style={{
+                    //     position: 'absolute',
+                    //     top: -12,
+                    //     left: -12,
+                    //     zIndex: 1
+                    // }} image={partner.avatar} />
                     partner.avatar ?
                         <Avatar.Image
                             size={28}
@@ -149,7 +154,8 @@ export const BubbleChat = ({ content, type, conversationState, sentAt, partner, 
                                 top: -12,
                                 left: -12,
                                 zIndex: 1
-                            }} />)}
+                            }} />
+                )}
 
                 <Card
                     onPress={onPress}

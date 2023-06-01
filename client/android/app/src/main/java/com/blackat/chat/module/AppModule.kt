@@ -4,14 +4,17 @@ import android.util.Log
 import androidx.lifecycle.Observer
 import com.blackat.chat.data.database.AppDatabase
 import com.blackat.chat.data.model.MessageState
+import com.blackat.chat.data.model.Partner
 import com.blackat.chat.data.model.PrivateConversationWithMessages
 import com.blackat.chat.data.repository.AppRepository
+import com.blackat.chat.data.repository.SignalRepository
 import com.blackat.chat.utils.ReadableMapUtils
 import com.blackat.chat.utils.WritableArrayUtils
 import com.blackat.chat.utils.WritableMapUtils
 import com.blackat.chat.viewmodel.AppViewModel
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.password4j.Password
 import kotlinx.coroutines.*
 
 class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(context), LifecycleEventListener {
@@ -174,6 +177,174 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
     }
 
     @ReactMethod
+    fun removePartnerNickname(e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.partner().changeNickname(e164, null)
+
+
+                    return@withContext true
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun getEnablePinSecurity(e164: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val conversation = AppRepository.privateConversation().get(e164)
+                    return@withContext conversation?.enablePinSecurity
+                }
+                if (response == null)
+                    promise.reject(Exception("cannot-found-conversation"))
+                else
+                    promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun changeEnablePinSecurity(e164: String, state: Boolean, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.privateConversation().changeEnablePinSecurity(e164, state)
+
+                    return@withContext true
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun requirePin(promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val hashed = SignalRepository.account().getPin()
+                    hashed ?: return@withContext false
+                    return@withContext true
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun verifyPin(pin: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val hashed = SignalRepository.account().getPin()
+                    return@withContext Password.check(pin, hashed).withArgon2()
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun setPin(pin: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val hashed = Password.hash(pin).addRandomSalt().withArgon2().result
+                    SignalRepository.account().setPin(hashed)
+
+                    return@withContext true
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun changePartnerNickname(e164: String, nickname: String, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.partner().changeNickname(e164, nickname)
+
+
+                    return@withContext true
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun upsertPartnerProfile(sender: ReadableMap,profile: ReadableMap, promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    val senderAddress = ReadableMapUtils.getAddress(sender)
+
+                    val partner = Partner(senderAddress.name, senderAddress.deviceId)
+                    profile.getString("name")?.let { name ->
+                        partner.name = name
+                    }
+                    profile.getString("avatar")?.let { avatar ->
+                        partner.avatar = avatar
+                    }
+
+                    AppRepository.partner().upsert(partner)
+
+
+
+                    return@withContext true;
+                }
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject(e)
+            }
+        }
+    }
+
+    @ReactMethod
     fun getSendingMessages(promise: Promise) {
         scope.launch {
             try {
@@ -280,6 +451,10 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
 
         val partner = AppRepository.partner().getByE164(e164)
         partner ?: AppRepository.partner().upsert(e164,0)
+//
+//        if (msg.type == Message.PROFILE_TYPE && msg.owner == Message.PARTNER) {
+//            JSONObject(msg.data).
+//        }
 
         conversation?.let {
             AppRepository.privateMessage().save(msg,it.id!!)
