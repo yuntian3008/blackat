@@ -55,6 +55,30 @@ class SignalRepository(signalDatabase: SignalDatabase) {
                     false
                 }
 
+        suspend fun resetApp(): Boolean =
+                try {
+                    account().regenerateIdentityKeyPair()
+                    account().regenerateRegistrationId()
+                    account().regenerateNextOneTimePreKeyId()
+                    account().regenerateNextSignedPreKeyId()
+                    account().resetE164()
+                    account().resetLocalDeviceId()
+                    account().resetProfileAvatar()
+                    account().resetProfileName()
+                    account().resetPin()
+                    signalSession().clear()
+                    signalIdentityKey().clear()
+                    signalSignedPreKey().clear()
+                    signalPreKey().clear()
+                    AppRepository.privateMessage().clear()
+                    AppRepository.privateConversation().clear()
+                    AppRepository.partner().clear()
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+
+
 
         suspend fun account() = getInstance().accountStore
         suspend fun signalIdentityKey() = getInstance().signalIdentityKeyStore

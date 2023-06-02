@@ -3,6 +3,7 @@ package com.blackat.chat.signal.storage
 import com.blackat.chat.data.dao.MessageWithE164
 import com.blackat.chat.data.dao.PrivateMessageDao
 import com.blackat.chat.data.model.*
+import kotlinx.coroutines.runBlocking
 
 class PrivateMessageStore(
         private val store: PrivateMessageDao,
@@ -30,4 +31,10 @@ class PrivateMessageStore(
     suspend fun markAsSent(id: Int) {
         return store.changeState(MessageState.SENT,id)
     }
+
+    suspend fun markAsError(id: Int) {
+        return store.changeState(MessageState.ERROR,id)
+    }
+
+    suspend fun clear() = store.clear()
 }

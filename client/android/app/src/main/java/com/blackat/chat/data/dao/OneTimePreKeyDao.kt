@@ -20,4 +20,7 @@ interface OneTimePreKeyDao {
 
     @Query("DELETE FROM one_time_pre_key WHERE keyId = :keyId")
     suspend fun delete(keyId: Int)
+
+    @Query("DELETE FROM one_time_pre_key")
+    suspend fun clear()
 }

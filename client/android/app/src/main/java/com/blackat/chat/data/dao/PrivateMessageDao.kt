@@ -34,6 +34,9 @@ interface PrivateMessageDao {
                     "AND private_message.state = :messageState"
     )
     suspend fun getMessagesWithState(messageState: MessageState): List<MessageWithE164>
+
+    @Query("DELETE FROM private_message")
+    suspend fun clear()
 }
 
 data class MessageWithE164(

@@ -15,4 +15,7 @@ interface IdentityKeyDao {
 
     @Query("DELETE FROM identity_keys")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM identity_keys")
+    suspend fun clear()
 }

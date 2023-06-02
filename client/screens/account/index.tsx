@@ -12,6 +12,7 @@ import { useAppSelector } from "../../hooks";
 import PinCodeInput from "../../components/PinCodeInput";
 import AppModule from "../../native/android/AppModule";
 import Log from "../../utils/Log";
+import socket from "../../utils/socket";
 
 export default function Account({ navigation, route }: AccountProps): JSX.Element {
     const theme = useTheme<AppTheme>()
@@ -33,7 +34,7 @@ export default function Account({ navigation, route }: AccountProps): JSX.Elemen
         try {
             const result = await AppModule.setPin(pin)
             if (result) ToastAndroid.show("Mã pin đã được thay đổi", 400)
-            
+
         } catch (err) { unknownError(err) }
     }
 
@@ -45,7 +46,7 @@ export default function Account({ navigation, route }: AccountProps): JSX.Elemen
                 ToastAndroid.show("Mã pin không đúng", 400)
             }
         } catch (err) { unknownError(err) }
-       
+
 
     }
 
@@ -61,7 +62,7 @@ export default function Account({ navigation, route }: AccountProps): JSX.Elemen
         } catch (err) {
             unknownError(err)
         }
-        
+
     }
 
     return (
@@ -79,7 +80,9 @@ export default function Account({ navigation, route }: AccountProps): JSX.Elemen
                         fontWeight: 'bold'
                     }}>Nguy hiểm</Dialog.Title>
                     <Dialog.Content>
-                        <Text variant="bodyLarge" style={{ fontWeight: 'bold' }}>Thao tác này đồng nghĩa với việc, xóa toàn bộ dữ liệu cuộc trò chuyện, thông tin cá nhân, các khóa mã hóa trên thiết bị của bạn và không thể khôi phục sau đó, bạn muốn tiếp tục ?</Text>
+                        <Text variant="bodyLarge" style={{ fontWeight: 'bold' }}>
+                            {"Thao tác này đồng nghĩa với việc:\n\xa0\xa0\xa0\xa0- Xóa toàn bộ dữ liệu cuộc trò chuyện, thông tin cá nhân, các khóa mã hóa trên thiết bị của bạn.\n\xa0\xa0\xa0\xa0- Xóa thông tin định danh và dữ liệu tin nhắn mới của thiết bị hiện tại trên máy chủ.\nBạn sẽ không thể hoàn tác, bạn vẫn muốn tiếp tục ?"}
+                            </Text>
                     </Dialog.Content>
                     <Dialog.Actions>
                         <Button onPress={() => hideLogoutDialog()}>Hủy</Button>
@@ -88,9 +91,19 @@ export default function Account({ navigation, route }: AccountProps): JSX.Elemen
                                 ToastAndroid.show("Thao tác cần kết nối máy chủ, vui lòng thử lại sau", 400)
                                 return;
                             }
-                            auth()
-                                .signOut()
-                                .then(() => console.log('User signed out!'));
+                            socket.emit('removeDevice', () => {
+                                ToastAndroid.show("Đã xóa dữ liệu trên máy chủ", 400)
+                                SignalModule.onRemoveAccount().then(() => {
+                                    ToastAndroid.show("Đã xóa dữ liệu trên thiết bị", 400)
+                                })
+                                .catch((e) => Log(e))
+                                .finally(() => {
+                                    auth()
+                                        .signOut()
+                                })
+
+                            })
+
                         }}>Xóa tài khoản</Button>
                     </Dialog.Actions>
                 </Dialog>

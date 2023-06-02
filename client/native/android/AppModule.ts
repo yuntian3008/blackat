@@ -22,6 +22,7 @@ interface AppModuleInterface {
     createConversation(e164: string, firstMessage: App.Types.MessageData): Promise<number>
     getSendingMessages(): Promise<Array<App.Types.MessageWithE164>>
     markAsSent(id: number): Promise<boolean>
+    markAsError(id: number): Promise<boolean>
     markAllPartnerMessageAsRead(conversationId: number): Promise<boolean>
     markAllPartnerMessageAsUnread(conversationId: number): Promise<boolean>
     getPartner(e164: string): Promise<App.Types.Partner | null>

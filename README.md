@@ -26,7 +26,7 @@ git clone https://github.com/thiensgith/blackat.git
 ```
 cd server && npm install
 ```
-2. Create ```.env``` file
+2. Create ```.env``` file. Ex: ```.env.example``` file
 ```
 MONGODB_SERVER=<YOUR MONGODB DATABASE URI>
 ```
@@ -42,7 +42,7 @@ Follow these steps to install and run Blackat on your Android device:
 ```
 cd client && npm install
 ```
-2. Create ```.env``` file
+2. Create ```.env``` file. Ex: ```.env.example``` file
 ```
 SOCKET_SERVER=<YOUR SERVER URI>
 ```

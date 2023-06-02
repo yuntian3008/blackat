@@ -14,6 +14,7 @@ import { encryptAndSendMessage, saveMessageToLocal } from "../../utils/Messaging
 import { formatISO } from "date-fns";
 import { readFile } from "react-native-fs";
 import { getProfileData } from "../../utils/Setting";
+import { ActivityIndicatorOverlay } from "../../components/Utils";
 
 const { CURRENT_COUNTRY_CODE } = SignalModule.getConstants();
 
@@ -27,6 +28,7 @@ type SearchResult = {
 export default function NewContact({ navigation }: NewContactProps): JSX.Element {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
+    const [loading, setLoading] = useState<boolean>(false)
 
     const socketConnection = useAppSelector(state => state.socketConnection.value)
     const dispatch = useAppDispatch()
@@ -47,6 +49,7 @@ export default function NewContact({ navigation }: NewContactProps): JSX.Element
             // console.log("SEND PROFILE")
             // console.log(profileMessage)
             try {
+                setLoading(true)
                 const result = await encryptAndSendMessage(localAddress!, e164, profileMessage)
                 if (result) {
                     navigation.navigate('ChatZone', {
@@ -60,6 +63,8 @@ export default function NewContact({ navigation }: NewContactProps): JSX.Element
             {   
                 console.log("sending profile")
                 console.log(err)
+            } finally {
+                setLoading(false)
             }
             
             
@@ -115,6 +120,7 @@ export default function NewContact({ navigation }: NewContactProps): JSX.Element
     const onChangeSearch = (query: string) => setSearchQuery(query);
     return (
         <SafeAreaView>
+            <ActivityIndicatorOverlay visible={loading}/>
             <View style={{ gap: 5, flexDirection: 'column', alignItems: 'center', height: '100%', paddingVertical: 20 }}>
                 <Searchbar
                     style={{ marginHorizontal: 20 }}

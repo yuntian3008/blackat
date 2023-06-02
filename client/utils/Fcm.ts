@@ -52,7 +52,8 @@ export const updateChat = async (notification: Notification, input: string) => {
             //     `<b>${data.address.e164}:</b> ${plainText.data}` : undefined
         })
     }
-    await saveMessageToLocal(e164, messageData, messageState)
+    if (result != null)
+        await saveMessageToLocal(e164, messageData, messageState)
 }
 
 export const onMessageReceived = async (message: FirebaseMessagingTypes.RemoteMessage) => {

@@ -49,4 +49,8 @@ class SignalSessionStore(
     override fun deleteAllSessions(name: String) = runBlocking {
         store.deleteAll(name)
     }
+
+    fun clear() = runBlocking {
+        store.clear()
+    }
 }

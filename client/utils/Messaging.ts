@@ -1,4 +1,4 @@
-import { formatISO } from "date-fns";
+import { add, formatISO } from "date-fns";
 import { App, BundleRequirement, Server, Signal, SignalError, SocketEvent } from "../../shared/types";
 import SignalModule from "../native/android/SignalModule";
 import Log, { LogEnabled } from "./Log";
@@ -28,6 +28,7 @@ export const prepareMessaging = async () => {
         const v = sendingMessage[i];
         const send = await encryptAndSendMessage(localAddress, v.e164, v.message, v.fileInfo)
         if (send) AppModule.markAsSent(v.id)
+        if (send == null) AppModule.markAsError(v.id)
     }
 }
 
@@ -275,9 +276,10 @@ export const receiveAndDecryptMessage = async (sender: Signal.Types.SignalProtoc
 
 export const encryptAndSendMessage = async function (
     localAddress: Signal.Types.SignalProtocolAddress,
-    e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo): Promise<boolean> {
+    e164: string, message: App.Types.MessageData, fileInfo?: Server.FileInfo): Promise<boolean | null> {
     // console.log("startSendMessageToServer")
     const addresses = await syncSession(e164)
+    if (addresses.length == 0) return null
     let messages: Array<Server.MessagePackage> = []
     for (let index = 0; index < addresses.length; index++) {
         const address = addresses[index];

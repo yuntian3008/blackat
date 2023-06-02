@@ -237,11 +237,11 @@ function App(): JSX.Element {
       // ToastAndroid.show('Đã đăng nhập đang kết nối máy chủ', ToastAndroid.SHORT)
       login()
     }
-    if (!user && socketConnection) {
-      socket.emit('logout')
-      SignalModule.logout()
-      BackHandler.exitApp()
-    }
+    // if (!user && socketConnection) {
+    //   socket.emit('logout')
+    //   // SignalModule.logout()
+    //   // BackHandler.exitApp()
+    // }
 
   }, [user])
 

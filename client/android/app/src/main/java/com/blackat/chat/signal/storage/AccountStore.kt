@@ -35,6 +35,11 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         private const val KEY_NEXT_ONE_TIME_PREKEY_ID = "account.next_one_time_prekey_id"
     }
 
+    suspend fun regenerateRegistrationId() {
+        if (contain(AccountStore.REGISTRATION_ID))
+            putInteger(AccountStore.REGISTRATION_ID, KeyHelper.generateRegistrationId(false))
+    }
+
     suspend fun generateRegistrationIdIfNecessary() {
         if (!contain(AccountStore.REGISTRATION_ID))
             putInteger(AccountStore.REGISTRATION_ID, KeyHelper.generateRegistrationId(false))
@@ -43,6 +48,11 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
     suspend fun getRegistrationId(): Int {
         generateRegistrationIdIfNecessary()
         return getInteger(AccountStore.REGISTRATION_ID, 0)!!
+    }
+
+    suspend fun regenerateNextSignedPreKeyId() {
+        if (contain(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID))
+            putInteger(AccountStore.KEY_NEXT_SIGNED_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
     }
 
     suspend fun generateNextSignedPreKeyIdIfNecessary() {
@@ -124,6 +134,11 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         return getInteger(LOCAL_DEVICE_ID,null)
     }
 
+    suspend fun regenerateNextOneTimePreKeyId() {
+        if (contain(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID))
+            putInteger(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
+    }
+
     suspend fun generateNextOneTimePreKeyIdIfNecessary() {
         if (!contain(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID))
             putInteger(AccountStore.KEY_NEXT_ONE_TIME_PREKEY_ID, SecureRandom().nextInt(Medium.MAX_VALUE))
@@ -138,6 +153,14 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         putInteger(KEY_NEXT_ONE_TIME_PREKEY_ID, value = value)
     }
 
+    suspend fun regenerateIdentityKeyPair() {
+        if (!hasIdentityKeyPair()) return;
+
+        val key = IdentityKeyUtil.generateIdentityKeyPair()
+        putBlob(KEY_IDENTITY_PUBLIC_KEY, key.publicKey.serialize())
+        putBlob(KEY_IDENTITY_PRIVATE_KEY, key.privateKey.serialize())
+    }
+
     suspend fun generateIdentityKeyPairIfNecessary() {
         if (hasIdentityKeyPair()) return;
 
@@ -146,7 +169,7 @@ class AccountStore(private val store: KeyValueDao) : SignalStoreValues(store) {
         putBlob(KEY_IDENTITY_PRIVATE_KEY, key.privateKey.serialize())
     }
 
-    suspend fun hasIdentityKeyPair(): Boolean {
+    private suspend fun hasIdentityKeyPair(): Boolean {
         return contain(AccountStore.KEY_IDENTITY_PUBLIC_KEY)
     }
 

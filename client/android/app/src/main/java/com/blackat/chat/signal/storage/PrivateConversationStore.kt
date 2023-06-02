@@ -61,4 +61,7 @@ class PrivateConversationStore(
     }
 
     fun getAllFlow(): Flow<List<PrivateConversation>> = conversationStore.getAllFlow()
+
+    suspend fun clear() = conversationStore.clear()
+
 }

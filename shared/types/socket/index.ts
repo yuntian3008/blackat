@@ -24,6 +24,7 @@ export interface ClientToServerEvents {
     outGoingMessage: (sender: Signal.Types.SignalProtocolAddress, mails: Array<Server.MessagePackage>, callback: (success: boolean) => void) => void
     deleteMail: (mailId: string) => void
     getAddresses: (e164: string, callback: (addresses: Array<Signal.Types.SignalProtocolAddress>) => void) => void
+    removeDevice: (callback: () => void) => void
 }
 
 export interface InterServerEvents {

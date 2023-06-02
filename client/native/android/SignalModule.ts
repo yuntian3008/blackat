@@ -33,6 +33,8 @@ interface SignalModuleInterface {
     updateProfile(profile: App.Types.Profile): Promise<boolean>
     getProfile(): Promise<App.Types.Profile>
 
+    onRemoveAccount(): Promise<boolean>
+
     // test
     testPerformance(data: string): Promise<string>
 }

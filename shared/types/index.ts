@@ -75,6 +75,7 @@ export namespace App {
         export const UNKNOWN = "UNKNOWN"
         export const READ = "READ"
         export const UNREAD = "UNREAD"
+        export const ERROR = "ERROR"
     }
     export namespace Types {
         export type Profile = {

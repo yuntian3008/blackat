@@ -36,6 +36,8 @@ class PartnerStore(
         } ?: store.insert(newPartner)
     }
 
+    suspend fun clear() = store.clear()
+
 
 //    suspend fun getMessageWithE164List(): List<MessageWithE164> {
 //        return store.getMessagesWithState(MessageState.SENDING)

@@ -22,4 +22,7 @@ interface SignedPreKeyDao {
 
     @Query("DELETE FROM signed_pre_key WHERE keyId = :keyId")
     suspend fun delete(keyId: Int)
+
+    @Query("DELETE FROM signed_pre_key")
+    suspend fun clear()
 }

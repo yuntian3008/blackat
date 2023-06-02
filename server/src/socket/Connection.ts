@@ -120,6 +120,47 @@ export default function Connection(socket: ServerSocket) {
         console.log(clients.keys())
     })
 
+
+    const onRemoveAccount = async () => {
+        try {
+            const deviceId = await Device.getId(socket.data.logged.e164, socket.data.logged.deviceId)
+            const keyRemoved = await Key.findOneAndRemove({ device: deviceId })
+            const mailRemoved = await Mail.findOneAndRemove({ device: deviceId })
+            const deviceRemoved = await Device.findByIdAndRemove(deviceId)
+
+            const user = await User.findOne({ phoneNumber: socket.data.logged.e164 })
+            if (user) {
+                const userWithDevice = await user.populate({
+                    path: 'devices',
+                    select: {
+                        deviceId: 1
+                    }
+                });
+                const removedDeviceIndex = userWithDevice.devices.indexOf(deviceId)
+                if (removedDeviceIndex > -1) {
+                    userWithDevice.devices.splice(removedDeviceIndex,1)
+                    await userWithDevice.save()
+                }
+                if (userWithDevice.devices.length == 0)
+                    await User.findByIdAndRemove(user._id) 
+            }
+
+
+        } catch (e) {
+            throw e
+        }
+    }
+
+    socket.on('removeDevice', (callback) => {
+        onRemoveAccount().catch((e) => {
+            console.log("[REMOVE DEVICE]")
+            console.log(e)
+        }).finally(() => {
+            callback()
+            socket.disconnect()
+        })
+    })
+
     socket.on('checkMailbox', (callback) => {
         Mail.getAll(socket.data.deviceObjectId).then((v) => {
             callback(v)

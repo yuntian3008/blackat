@@ -32,4 +32,7 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions")
     suspend fun deleteAllTable()
+
+    @Query("DELETE FROM sessions")
+    suspend fun clear()
 }

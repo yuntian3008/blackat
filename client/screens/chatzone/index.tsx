@@ -68,6 +68,16 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
         }
     })
 
+    useEffect(() => {
+        const backAction = () => {
+            navigation.popToTop()
+            return true
+        }
+        const backHandler = BackHandler.addEventListener('hardwareBackPress',backAction)
+
+        return () => backHandler.remove()
+    },[])
+
     //  OBSERVE MESSAGE DATA
     const conversationData = useAppSelector(state => state.conversationData.value)
 
@@ -126,6 +136,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
             case App.MessageState.SENT:
                 setConversationState(ConversationState.sent)
                 break;
+            case App.MessageState.ERROR:
+                setConversationState(ConversationState.error)
 
             default:
                 setConversationState(ConversationState.unknown)
@@ -227,6 +239,11 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 const result = await encryptAndSendMessage(localAddress!, route.params.e164, messageData, fileInfo)
                 if (result)
                     messageState = App.MessageState.SENT
+                if (result == null) {
+                    messageState = App.MessageState.ERROR
+                    ToastAndroid.show("Người liên hệ không còn tồn tại trong hệ thống",1000)
+                }
+                    
             }
             await saveMessageToLocal(route.params.e164, messageData, messageState, fileInfo)
         } catch (e) {

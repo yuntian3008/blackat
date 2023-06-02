@@ -26,4 +26,8 @@ class SignalSignedPreKeyStore(private val signedPreKeyStore: SignedPreKeyDao): S
     override fun removeSignedPreKey(signedPreKeyId: Int) = runBlocking {
         signedPreKeyStore.delete(signedPreKeyId)
     }
+
+    fun clear() = runBlocking {
+        signedPreKeyStore.clear()
+    }
 }

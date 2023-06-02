@@ -441,6 +441,27 @@ class AppModule(context: ReactApplicationContext) : ReactContextBaseJavaModule(c
         }
     }
 
+    @ReactMethod
+    fun markAsError(id: Int, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    AppRepository.privateMessage().markAsError(id)
+
+
+                    return@withContext;
+                }
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject(e)
+                Log.e("testError",e.stackTraceToString())
+            }
+        }
+    }
+
     private suspend fun saveMessageNative(e164: String, message: ReadableMap, messageState: String, fileInfoMap: ReadableMap?) {
         val conversation = AppRepository.privateConversation().get(e164)
         val msg = ReadableMapUtils.getMessage(message)

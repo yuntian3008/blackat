@@ -660,6 +660,24 @@ class SignalModule(context: ReactApplicationContext) : ReactContextBaseJavaModul
     }
 
     @ReactMethod
+    fun onRemoveAccount(promise: Promise) {
+        scope.launch {
+            try {
+                val response = withContext(context = Dispatchers.IO) {
+                    if (reactApplicationContext == null)
+                        throw Exception("context null")
+
+                    return@withContext SignalRepository.resetApp()
+                }
+
+                promise.resolve(response)
+            } catch (e: Exception) {
+                promise.reject("stack",e.stackTraceToString())
+            }
+        }
+    }
+
+    @ReactMethod
     fun onFirstEverAppLaunch(promise: Promise) {
         scope.launch {
             try {

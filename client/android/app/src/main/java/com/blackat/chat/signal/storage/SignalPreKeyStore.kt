@@ -31,4 +31,7 @@ class SignalPreKeyStore(
         preKeyStore.delete(preKeyId)
     }
 
+    fun clear() = runBlocking {
+        preKeyStore.clear()
+    }
 }

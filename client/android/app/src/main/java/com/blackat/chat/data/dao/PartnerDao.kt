@@ -32,4 +32,7 @@ interface PartnerDao {
 
     @Query("DELETE FROM partner")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM partner")
+    suspend fun clear()
 }

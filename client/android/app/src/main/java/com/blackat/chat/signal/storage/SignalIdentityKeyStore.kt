@@ -54,4 +54,8 @@ class SignalIdentityKeyStore(private val store: IdentityKeyDao): IdentityKeyStor
         return@runBlocking IdentityKey(byte)
     }
 
+    fun clear() = runBlocking {
+        store.clear()
+    }
+
 }
