@@ -56,6 +56,9 @@ async function run() {
   });
 }
 
-run().catch(err => console.log("can't connect to database"))
+run().catch((err) => {
+  console.log("can't connect to database") 
+  console.log(err)
+})
 
 
