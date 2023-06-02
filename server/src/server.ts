@@ -9,8 +9,9 @@ import AuthMiddleware from "./socket/middleware/AuthMiddleware";
 import test, { testMode } from "./test";
 import { ServerSocket } from "socket";
 import { Signal } from "../../shared/types";
-import 'dotenv/config'
+import { config } from 'dotenv'
 
+config({debug: true})
 const app = express();
 const httpServer = createServer(app);
 const io = new Server<
