@@ -9,9 +9,6 @@ import AuthMiddleware from "./socket/middleware/AuthMiddleware";
 import test, { testMode } from "./test";
 import { ServerSocket } from "socket";
 import { Signal } from "../../shared/types";
-import { config } from 'dotenv'
-
-config({debug: true})
 const app = express();
 const httpServer = createServer(app);
 const io = new Server<
@@ -44,7 +41,7 @@ io.on("connection", (socket) => {
 
 async function run() {
   
-  await connect(process.env.MONGODB_SERVER)
+  await connect('mongodb+srv://blackat:Tpl.22062001@blackat.pnrmksc.mongodb.net/blackat')
   console.log("[SYS] Connected to MONGODB")
 
   if (testMode) {
@@ -52,8 +49,8 @@ async function run() {
     return
   }
 
-  httpServer.listen(process.env.SOCKET_PORT, () => {
-    console.log('[SYS] Listen at ' + process.env.SOCKET_PORT)
+  httpServer.listen(3000, () => {
+    console.log('[SYS] Listen at ' + 3000)
   });
 }
 

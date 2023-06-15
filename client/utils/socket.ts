@@ -1,7 +1,7 @@
 import { Socket, io } from "socket.io-client";
 import { ServerToClientEvents, ClientToServerEvents } from '../../shared/types/socket'
 import { Server, Signal, SocketEvent } from "../../shared/types";
-import { SOCKET_SERVER } from "@env";
+// import { SOCKET_SERVER } from "@env";
 
 /*const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://103.161.97.57:3000', {
     autoConnect: false,
@@ -9,8 +9,8 @@ import { SOCKET_SERVER } from "@env";
 }) */
 
 
-console.log(SOCKET_SERVER)
-const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_SERVER, {
+// console.log(SOCKET_SERVER)
+const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io('http://103.161.97.57:3000', {
     autoConnect: false,
     timeout: 5000,
 })
