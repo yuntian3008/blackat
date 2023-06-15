@@ -193,7 +193,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
     // ]
 
     const convertUI = (message: App.Types.MessageData): ChatItemProps => {
-        const partner = conversationData.find(v => v.conversation.e164 == route.params.e164)!.partner
+        // partner will be undefined if this is a first message
+        const partner = conversationData.find(v => v.conversation.e164 == route.params.e164)?.partner
         return {
             kind: ChatItemKind.bubble,
             data: {
@@ -206,8 +207,8 @@ export default function ChatZone({ navigation, route }: ChatZoneProps): JSX.Elem
                 type: toBubbleChatType(message.type),
                 sentAt: message.timestamp,
                 partner: (message.owner == App.MessageOwner.PARTNER) ? {
-                    name: partner.nickname ?? partner.name ?? route.params.e164,
-                    avatar: partner.avatar
+                    name: partner?.nickname ?? partner?.name ?? route.params.e164,
+                    avatar: partner?.avatar
                 } : undefined,
             }
         }
